@@ -2,6 +2,7 @@
 # PhotoShare: A simple on-line photo social network system
 
 ## SQL Schema
+![ER Diagram](./er_diagram.jpg)
 - __Users__  
   Each user is identified by a unique user id and has the following attributes: first name, last name, email, date of birth, hometown, gender, and password. A user can have a number of Albums.
 - __Friends__  
