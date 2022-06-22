@@ -8,6 +8,16 @@
   <h1>Hello {{ name }}!</h1>
 {% endif %}
 
+{% if albums %}
+  <h2>Your albums:</h2>
+  <ul>
+  {% for album in albums %}
+    <li>{{ album.name }}</li>
+    <li>{{ album.date_created}}</li>
+  {% endfor %}
+  </ul>
+{% endif %}
+
 {% if photos %}
 <h2>Here are your photos</h2>
     <ul>

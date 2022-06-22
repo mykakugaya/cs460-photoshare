@@ -11,6 +11,7 @@ flask-sqlalchemy = "*"
 requests = "*"
 werkzeug = "*"
 cryptography = "*"
+python-dateutil = "*"
 
 [dev-packages]
 

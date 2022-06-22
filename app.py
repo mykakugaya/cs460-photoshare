@@ -7,6 +7,8 @@ import flask_login
 
 #for image uploading
 import os, base64
+import datetime
+from dateutil import parser
 
 mysql = MySQL()
 app = Flask(__name__)
@@ -19,15 +21,16 @@ app.config['MYSQL_DATABASE_DB'] = 'photoshare'
 app.config['MYSQL_DATABASE_HOST'] = 'localhost'
 mysql.init_app(app)
 
-#begin code used for login
+### LOGIN CODE ###
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 
 conn = mysql.connect()
-cursor = conn.cursor()
-cursor.execute("SELECT email from Users")
-users = cursor.fetchall()
+# cursor = conn.cursor()
+# cursor.execute("SELECT email from Users")
+# users = cursor.fetchall()
 
+# Get all user emails
 def getUserList():
 	cursor = conn.cursor()
 	cursor.execute("SELECT email from Users")
@@ -66,7 +69,7 @@ A new page looks like this:
 def new_page_function():
 	return new_page_html
 '''
-
+# Login user
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 	if flask.request.method == 'GET':
@@ -95,6 +98,7 @@ def login():
 	return "<a href='/login'>Try again</a>\
 			</br><a href='/register'>or make an account</a>"
 
+# Logout user
 @app.route('/logout')
 def logout():
 	flask_login.logout_user()
@@ -104,23 +108,29 @@ def logout():
 def unauthorized_handler():
 	return render_template('unauth.html')
 
-#you can specify specific methods (GET/POST) in function header instead of inside the functions as seen earlier
+# Register page
 @app.route("/register", methods=['GET'])
 def register():
 	return render_template('register.html', supress='True')
 
+# Register a new user
 @app.route("/register", methods=['POST'])
 def register_user():
 	try:
-		email=request.form.get('email')
-		password=request.form.get('password')
+		email = request.form.get('email')
+		password = request.form.get('password')
+		first_name = request.form.get('first_name')
+		last_name = request.form.get('last_name')
+		gender = request.form.get('gender')
+		dob = parser.parse(request.form.get('dob'))
+		hometown = request.form.get('hometown')
 	except:
 		print("couldn't find all tokens") #this prints to shell, end users will not see this (all print statements go to shell)
 		return flask.redirect(flask.url_for('register'))
 	cursor = conn.cursor()
-	test =  isEmailUnique(email)
+	test = isEmailUnique(email)
 	if test:
-		print(cursor.execute("INSERT INTO Users (email, password) VALUES ('{0}', '{1}')".format(email, password)))
+		print(cursor.execute("INSERT INTO Users (email, password, first_name, last_name, gender, dob, hometown) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}')".format(email, password, first_name, last_name, gender, dob, hometown)))
 		conn.commit()
 		#log user in
 		user = User()
@@ -131,16 +141,7 @@ def register_user():
 		print("couldn't find all tokens")
 		return flask.redirect(flask.url_for('register'))
 
-def getUsersPhotos(uid):
-	cursor = conn.cursor()
-	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE user_id = '{0}'".format(uid))
-	return cursor.fetchall() #NOTE return a list of tuples, [(imgdata, pid, caption), ...]
-
-def getUserIdFromEmail(email):
-	cursor = conn.cursor()
-	cursor.execute("SELECT user_id  FROM Users WHERE email = '{0}'".format(email))
-	return cursor.fetchone()[0]
-
+# determine if email is unique
 def isEmailUnique(email):
 	#use this to check if a email has already been registered
 	cursor = conn.cursor()
@@ -149,41 +150,132 @@ def isEmailUnique(email):
 		return False
 	else:
 		return True
-#end login code
 
+### END LOGIN CODE ###
+
+
+### USER PROFILE CODE ###
+# User profile page
 @app.route('/profile')
 @flask_login.login_required
 def protected():
 	return render_template('hello.html', name=flask_login.current_user.id, message="Here's your profile")
+	
+# get user_id from user email
+def getUserIdFromEmail(email):
+	cursor = conn.cursor()
+	cursor.execute("SELECT user_id FROM Users WHERE email = '{0}'".format(email))
+	return cursor.fetchone()[0]
 
-#begin photo uploading code
+# get all user info
+def getUserInfoFromEmail(uid):
+	cursor = conn.cursor()
+	cursor.execute("SELECT * FROM Users WHERE user_id = '{0}'".format(uid))
+	return cursor.fetchone()
+
+# get all photos for a user
+def getUserPhotos(uid):
+	cursor = conn.cursor()
+	cursor.execute("SELECT imgdata, picture_id, caption FROM Photos WHERE user_id = '{0}'".format(uid))
+	return cursor.fetchall() #NOTE return a list of tuples, [(imgdata, pid, caption), ...]
+
+# get all albums for a user
+def getUserAlbums(uid):
+	cursor = conn.cursor()
+	cursor.execute("SELECT album_id, name, date_created FROM Albums WHERE user_id = '{0}'".format(uid))
+	return cursor.fetchall()
+
+### END USER PROFILE CODE ###
+
+
+### ALBUM CODE ###
+# create new album
+@app.route('/new_album', methods=['GET', 'POST'])
+@flask_login.login_required
+def new_album():
+	# if GET, show create album form
+	if flask.request.method == 'GET':
+		return render_template('album.html', name=flask_login.current_user.id, message='Create a new album')
+	# if POST, create album and redirect to the album page
+	else:
+		try:
+			name = request.form.get('name')
+			date_created = datetime.date.today()
+			user_id = getUserIdFromEmail(flask_login.current_user.id)
+		except:
+			print("couldn't find all tokens")
+			return flask.redirect(flask.url_for('new_album'))
+		cursor = conn.cursor()
+		cursor.execute("INSERT INTO Albums (name, date_created, user_id) VALUES ('{0}', '{1}', '{2}')".format(name, date_created, user_id))
+		conn.commit()
+		cursor.execute('''SELECT name, date_created FROM Albums WHERE album_id = LAST_INSERT_ID()''')
+		newAlbum = cursor.fetchone()
+		return render_template('album.html', name=flask_login.current_user.id, message='Album Created!', album=newAlbum)
+
+# get all photos in a specific album
+def getAlbumPhotos(album_id):
+	conn = mysql.connect()
+	cursor = conn.cursor()
+	cursor.execute("SELECT caption, photo_id, data, likes FROM Photos WHERE album_id = '{0}'".format(album_id))
+	album_photos = [] 
+	for tup in cursor.fetchall():
+		photo_id = int(tup[1])
+		cursor.execute("SELECT T.name FROM Tags T, TaggedWith TW WHERE T.tag_id = TW.tag_id AND TW.photo_id = {0}".format(photo_id))
+		album_photos.append(
+			{
+				"photoId": photo_id,
+				"caption": str(tup[0]), 
+				"url": str(tup[2].decode()),
+				"likes": getPhotoLikes(photo_id),
+				"tags": [t[0] for t in cursor.fetchall()]
+			}
+		)
+	return album_photos
+
+# get album info from album_id
+def getAlbumInfo(album_id):
+	cursor = conn.cursor()
+	cursor.execute("SELECT name, date_created FROM Albums WHERE album_id = '{0}'".format(album_id))
+	return cursor.fetchone()
+
+### END ALBUM CODE ###
+
+
+### PHOTO CODE ###
 # photos uploaded using base64 encoding so they can be directly embeded in HTML
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 def allowed_file(filename):
 	return '.' in filename and filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
 
+# upload a photo to an album
 @app.route('/upload', methods=['GET', 'POST'])
 @flask_login.login_required
 def upload_file():
 	if request.method == 'POST':
 		uid = getUserIdFromEmail(flask_login.current_user.id)
+		album_id = request.form.get('album_id')	##TODO: not sure yet how we'll get album_id from form
 		imgfile = request.files['photo']
+		photo_data = imgfile.read()
 		caption = request.form.get('caption')
-		photo_data =imgfile.read()
+		date = datetime.date.today()
+
 		cursor = conn.cursor()
-		cursor.execute('''INSERT INTO Pictures (imgdata, user_id, caption) VALUES (%s, %s, %s )''', (photo_data, uid, caption))
+		cursor.execute('''INSERT INTO Photos (user_id, album_id, data, caption, date_added) VALUES (%s, %s, %s )''', (uid, album_id, photo_data, caption, date))
 		conn.commit()
-		return render_template('hello.html', name=flask_login.current_user.id, message='Photo uploaded!', photos=getUsersPhotos(uid), base64=base64)
+		return render_template('album.html', name=flask_login.current_user.id, message='Photo uploaded!', album=getAlbumInfo(album_id), photos=getAlbumPhotos(album_id), base64=base64)
 	#The method is GET so we return a  HTML form to upload the a photo.
 	else:
-		return render_template('upload.html')
-#end photo uploading code
+		return render_template('upload.html')	##TODO: specify album id
+
+### END PHOTO CODE ###
+
+### COMMENTS, LIKES, TAGS CODE ###
 
 
-#default page
+# Default landing page
 @app.route("/", methods=['GET'])
 def hello():
-	return render_template('hello.html', message='Welecome to Photoshare')
+	return render_template('hello.html', message='Welcome to Photoshare')
 
 
 if __name__ == "__main__":
