@@ -112,8 +112,8 @@ def register_user():
 	try:
 		email = request.form.get('email')
 		password = request.form.get('password')
-		first_name = request.form.get('first_name')
-		last_name = request.form.get('last_name')
+		first_name = request.form.get('firstname')
+		last_name = request.form.get('lastname')
 		gender = request.form.get('gender')
 		dob = parser.parse(request.form.get('dob'))
 		hometown = request.form.get('hometown')
@@ -153,13 +153,13 @@ def isEmailUnique(email):
 @flask_login.login_required
 def protected():
 	albums = getUserAlbums(flask_login.current_user.id)
-	return render_template('hello.html', name=flask_login.current_user.id, message="Profile", albumList=albums, user=flask_login.current_user.id)
+	return render_template('profile.html', name=flask_login.current_user.id, message="Here is your profile", albumList=albums, user=flask_login.current_user.id)
 	
 @app.route('/profile/:uid')
 def profile(uid):
 	albums = getUserAlbums(uid)
 	user = getUserEmail(uid)
-	return render_template('hello.html', name=flask_login.current_user.id, message="Profile", albumList=albums, user=user)
+	return render_template('profile.html', name=flask_login.current_user.id, message="Here is your profile", albumList=albums, user=user)
 	
 # get user_id from user email
 def getUserIdFromEmail(email):

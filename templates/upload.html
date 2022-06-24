@@ -9,8 +9,10 @@
             <form method="post" enctype="multipart/form-data" action="/upload">
                 <label for="photo">Select photo:</label>
                 <input type="file" name="photo" required='true' /><br />
-                <label for="caption">Please caption:</label>
+                <label for="caption">Add caption:</label>
                 <input type="text" name="caption" required='true' /><br />
+                <label for="tags">Add tags (separate with ", " - e.g., "tag1, tag2, tag3"):</label>
+                <input type="text" name="tags" required='false' /><br />
                 <input type="submit" value="Upload" />
             </form>
     </body>

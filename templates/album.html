@@ -1,15 +1,59 @@
-{% if album %}
-    <h2>{{album.name}}</h2>
-    <h3>{{album.date_created}}</h3>
-{% endif %}
+<!-- ALBUM PAGE: view all photos in an album, upload new photos to album -->
+<head>
+    <title>Photoshare</title>
+    {% if name %}
+      <h1>Hello {{ name }}!</h1>
+    {% endif %}
+</head>
 
-{% if photos %}
-<h2>Here are your photos</h2>
+<body>
+    {% if album %}
+        <h2>{{album.name}}</h2>
+        <h3>{{album.date}}</h3>
+    
+        <!-- button to upload photo -->
+        <button type="button" class="btn btn-default" data-toggle="modal" data-target="#myModal">
+            Upload Photo
+        </button>
+        <!-- create modal for photo upload -->
+        <div id="myModal" class="modal">
+            <div class="modal content">
+                <div class="title">
+                    <h1>Upload a photo to Photoshare</h1>
+                </div>
+                <form method="post" enctype="multipart/form-data" action="/upload">
+                    <label for="photo">Select photo:</label>
+                    <input type="file" name="photo" required='true' /><br />
+                    <label for="caption">Add caption:</label>
+                    <input type="text" name="caption" required='true' /><br />
+                    <label for="tags">Add tags (separate with ", " - e.g., "tag1, tag2, tag3"):</label>
+                    <input type="text" name="tags" required='false' /><br />
+                    <input type="submit" value="Upload" />
+                </form>
+            </div>
+        </div>
+    {% endif %}
+    
+    {% if photos %}
+    <h2>Here are your photos</h2>
+        <ul>
+        {% for photo in photos %}
+    
+            <li>{{photo[0]}}<br>
+            <img src='data:image/jpg;base64, {{ base64.b64encode(photo[2]).decode("ascii") }}'/></li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+
+    <!-- TODO: create a modal for viewing each individual photo and its details -->
+    
     <ul>
-    {% for photo in photos %}
-
-        <li>{{photo[2]}}<br>
-        <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}'/></li>
-    {% endfor %}
+        {% if not name %}
+        <li><a href='/login'>Login</a></li>
+        <li><a href='/register'>or create an account</a></li>
+        {% endif %}
+        <li><a href='/'>Home</a> </li>
+        <li><a href='/profile'>My Profile</a> </li>
+        <li><a href='/logout'>Logout</a> </li>
     </ul>
-{% endif %}
+</body>
