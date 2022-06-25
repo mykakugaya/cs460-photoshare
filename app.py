@@ -155,14 +155,20 @@ def isEmailUnique(email):
 def protected():
 	uid = getUserIdFromEmail(flask_login.current_user.id)
 	albums = getUserAlbums(uid)
-	return render_template('profile.html', name=flask_login.current_user.id, message="Here is your profile", albums=albums, user=flask_login.current_user.id)
+	friends = getUserFriends(uid)
+	return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=flask_login.current_user.id, id=getUserIdFromEmail(flask_login.current_user.id), friends=friends, owner=True)
 	
-@app.route('/profile/<string:email>')
-def profile(email):
-	uid = getUserIdFromEmail(email)
+@app.route('/profile/<int:uid>')
+def profile(uid):
+	# uid = getUserIdFromEmail(email)
 	albums = getUserAlbums(uid)
-	# user = getUserEmail(uid)
-	return render_template('profile.html', name=flask_login.current_user.id, message="Here is your profile", albums=albums, user=email)
+	email = getUserEmail(uid)
+	friends = getUserFriends(uid)
+	myFriends = getUserFriends(getUserIdFromEmail(flask_login.current_user.id))
+	if email == flask_login.current_user.id:
+		return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=email, id=getUserIdFromEmail(uid), friends=friends, myFriends=myFriends, owner=True)
+	else:
+		return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=email, id=getUserIdFromEmail(uid), friends=friends, myFriends=myFriends, owner=False)
 	
 # get user_id from user email
 def getUserIdFromEmail(email):
@@ -192,7 +198,7 @@ def getUserPhotos(uid):
 # get all albums for a user
 def getUserAlbums(uid):
 	cursor = conn.cursor()
-	cursor.execute("SELECT album_id, name, date_created FROM Albums WHERE user_id = '{0}'".format(uid))
+	cursor.execute("SELECT album_id, name, date_created, num_photos FROM Albums WHERE user_id = '{0}'".format(uid))
 	return cursor.fetchall()
 
 ### END USER PROFILE CODE ###
@@ -202,13 +208,13 @@ def getUserAlbums(uid):
 # get all friends for a user
 @app.route('/friends/<int:uid>')
 @flask_login.login_required
-def getFriends(uid):
+def getUserFriends(uid):
 	cursor = conn.cursor()
-	cursor.execute("SELECT FW.user1_id AS uid, U.first_name, U.last_name FROM FriendsWith FW, Users U WHERE U.user_id = FW.user1_id AND FW.user2_id = {0} UNION SELECT FW.user2_id AS uid, U.first_name, U.last_name FROM Friends_With FW, Users U WHERE U.user_id = FW.user2_id AND FW.user1_id = {0}".format(uid))
+	cursor.execute("SELECT FW.user1_id AS uid, U.first_name, U.last_name FROM FriendsWith FW, Users U WHERE U.user_id = FW.user1_id AND FW.user2_id = {0} UNION SELECT FW.user2_id AS uid, U.first_name, U.last_name FROM FriendsWith FW, Users U WHERE U.user_id = FW.user2_id AND FW.user1_id = {0}".format(uid))
 	return cursor.fetchall()
 
 # add a new friend for a user
-@app.route('/addFriend/<int:uid>', methods=['GET'])
+@app.route('/add_friend/<int:uid>', methods=['POST'])
 @flask_login.login_required
 def addFriend(uid):
 	cursor = conn.cursor()
@@ -216,7 +222,32 @@ def addFriend(uid):
 	conn.commit()
 	return flask.redirect(flask.url_for('protected'))
 
+# remove a friend for a user
+@app.route('/remove_friend/<int:uid>', methods=['POST'])
+@flask_login.login_required
+def removeFriend(uid):
+	cursor = conn.cursor()
+	cursor.execute("DELETE FROM FriendsWith WHERE user1_id = {0} AND user2_id = {1} OR user1_id = {1} AND user2_id = {0}".format(flask_login.current_user.id, uid))
+	conn.commit()
+	return flask.redirect(flask.url_for('protected'))
+
+### END FRIENDS CODE ###
+
+
 ### ALBUM CODE ###
+# display one album and its photos
+# album.html: albumId, album (name), date, userEmail, photos
+@app.route('/album/<int:aid>', methods=['GET'])
+@flask_login.login_required
+def album(aid):
+	# get album info
+	albumInfo = getAlbumInfo(aid)
+	print(albumInfo[3])
+	owner = getUserEmail(albumInfo[3])
+	# get photos for this album
+	photos = getAlbumPhotos(aid)
+	return render_template('album.html', name=flask_login.current_user.id, message='View Album', albumId=albumInfo[0], album=albumInfo[1], date=albumInfo[2], numPhotos=albumInfo[4], owner=owner, photos=photos)
+
 # create new album
 # album.html: albumId, album (name), date, userEmail 
 @app.route('/new_album', methods=['GET', 'POST'])
@@ -241,24 +272,21 @@ def new_album():
 		newAlbum = cursor.fetchone()
 		return render_template('album.html', name=flask_login.current_user.id, message='New Album Created', albumId=newAlbum[0], album=newAlbum[1], date=newAlbum[2], numPhotos=0, owner=flask_login.current_user.id)
 
-# display one album and its photos
-# album.html: albumId, album (name), date, userEmail, photos
-@app.route('/album/<int:aid>', methods=['GET'])
+# delete an album
+@app.route('/delete_album/<int:aid>', methods=['POST'])
 @flask_login.login_required
-def album(aid):
-	# get album info
-	albumInfo = getAlbumInfo(aid)
-	print(albumInfo[3])
-	owner = getUserEmail(albumInfo[3])
-	# get photos for this album
-	photos = getAlbumPhotos(aid)
-	return render_template('album.html', name=flask_login.current_user.id, message='View Album', albumId=albumInfo[0], album=albumInfo[1], date=albumInfo[2], numPhotos=albumInfo[4], owner=owner, photos=photos)
+def delete_album(aid):
+	cursor = conn.cursor()
+	cursor.execute("DELETE FROM Albums WHERE album_id = '{0}'".format(aid))
+	conn.commit()
+	return flask.redirect(flask.url_for('protected'))
+
 
 # get all photos in a specific album
 def getAlbumPhotos(album_id):
 	# conn = mysql.connect()
 	cursor = conn.cursor()
-	cursor.execute("SELECT caption, photo_id, data, num_likes FROM Photos WHERE album_id = '{0}'".format(album_id))
+	cursor.execute("SELECT caption, photo_id, data, num_likes, date_added FROM Photos WHERE album_id = '{0}'".format(album_id))
 	album_photos = [] 
 	for tup in cursor.fetchall():
 		photo_id = int(tup[1])
@@ -268,9 +296,10 @@ def getAlbumPhotos(album_id):
 				"photoId": photo_id,
 				"caption": str(tup[0]), 
 				"data": str(tup[2].decode()),
-				"likes": int(tup[3]),
+				"numLikes": int(tup[3]),
 				# "likes": getPhotoLikes(photo_id),
-				"tags": [t[0] for t in tags]
+				"tags": [t[0] for t in tags],
+				"date": str(tup[4])
 			}
 		)
 	return album_photos
@@ -309,7 +338,7 @@ def photo(pid):
 
 	# get album owner
 	owner = getUserEmail(albumInfo[3])
-	return render_template('photo.html', name=flask_login.current_user.id, message='Photo', photoId=pid, caption=caption, photo=photo_data, date=date, album=albumInfo, owner=owner, tags=tags, comments=comments, likes=numlikes)
+	return render_template('photo.html', name=flask_login.current_user.id, message='Photo', photoId=pid, caption=caption, photo=photo_data, date=date, album=albumInfo, owner=owner, tags=tags, comments=comments, numLikes=numlikes)
 
 # get photo info from photo_id
 def getPhotoInfo(pid):
@@ -396,7 +425,7 @@ def upload_file(aid):
 					cursor.execute('''INSERT INTO TaggedWith (tag_id, photo_id) VALUES (%s, %s)''', (tag_id, pid))
 					conn.commit()
 
-			albumInfo = getAlbumInfo(album_id)
+			# albumInfo = getAlbumInfo(album_id)
 			# photos=getAlbumPhotos(album_id)
 			# return render_template('album.html', name=flask_login.current_user.id, message='Photo uploaded!', albumId=album_id, album=albumInfo[1], date=albumInfo[2], photos=photos, base64=base64, owner=getUserEmail(albumInfo[3])) 
 			return flask.redirect(flask.url_for('photo', pid=pid))
@@ -405,6 +434,28 @@ def upload_file(aid):
 		# albumInfo = getAlbumInfo(album_id)
 		# photos=getAlbumPhotos(album_id)
 		return flask.redirect(flask.url_for('album', aid=album_id))
+
+# delete a photo
+@app.route('/delete_photo/<int:pid>', methods=['GET', 'POST'])
+@flask_login.login_required
+def delete_photo(pid):
+	if request.method == 'POST':
+		# uid = getUserIdFromEmail(flask_login.current_user.id)
+		aid = getPhotoInfo(pid).get('albumId')
+		cursor = conn.cursor()
+		cursor.execute("DELETE FROM Photos WHERE photo_id = '{0}'".format(pid))
+		conn.commit()
+		cursor.execute("DELETE FROM TaggedWith WHERE photo_id = '{0}'".format(pid))
+		conn.commit()
+		cursor.execute("DELETE FROM Comments WHERE photo_id = '{0}'".format(pid))
+		conn.commit()
+		cursor.execute("DELETE FROM LikedBy WHERE photo_id = '{0}'".format(pid))
+		conn.commit()
+		cursor.execute("UPDATE Albums SET num_photos = num_photos - 1 WHERE album_id = '{0}'".format(aid))
+		conn.commit()
+		return flask.redirect(flask.url_for('album', aid=aid))
+	else:
+		return flask.redirect(flask.url_for('album', aid=aid))
 
 ### END PHOTO CODE ###
 

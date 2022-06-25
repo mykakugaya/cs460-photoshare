@@ -1,13 +1,12 @@
 <!-- LANDING PAGE -->
 {% if message %}
-  <h4>{{message}}!</h4>
+  <h1>{{message}}!</h1>
 {% endif %}
 <title>Photoshare</title>
 {% if name %}
-  <h1>Hello {{ name }}!</h1>
+  <h3>Hello, {{ name }}!</h3>
 {% endif %}
 
-<br/>
 <h3>Main Menu:</h3>
 <ul>
   {% if not name %}

@@ -43,23 +43,27 @@
         }
         </style>
 
-    {% if message %}
+    <!-- {% if message %}
     <h4>{{message}}!</h4>
-    {% endif %}
+    {% endif %} -->
     <title>Photoshare</title>
     {% if name %}
-      <h1>Hello {{ name }}!</h1>
+    <h3>Hello, {{ name }}!</h3>
     {% endif %}
 </head>
 
 <body>
+    <!-- if no album, then display new album form -->
     {% if not album %}
       <h4>New Album Details</h4>
         <form action='/new_album' method='POST'>
             <label for="name">Album Name:</label>
             <input type='text' name='name' id='name' placeholder='name'></input>
             <input type='submit' name='submit'></input>
+        </form>
     {% endif %}
+
+    <!-- if album passed in, display album details -->
     {% if album %}
         <h2>Name: {{album}}</h2>
         <p>Owner: {{owner}}</p>
@@ -68,9 +72,9 @@
         
         {% if name == owner %}
             <!-- DELETE ALBUM BTN -->
-            <!-- <form action='/delete_album/{{albumId}}' method='POST'>
+            <form action='/delete_album/{{albumId}}' method='POST'>
                 <input type='submit' value='Delete Album'></input>
-            </form> -->
+            </form>
             <!-- UPLOAD PHOTO BTN -->
             <button id="btnModal" type="button" class="btn btn-default" data-toggle="modal" data-target="#myModal">
                 Upload Photo
@@ -82,7 +86,7 @@
                 <div class="modal-content">
                     <span class="close">&times;</span>
                     <div class="title">
-                        <h1>Upload a photo to {{album}}</h1>
+                        <h3>Upload to: {{album}}</h3>
                     </div>
                     <form method="post" enctype="multipart/form-data" action="/upload/{{albumId}}">
                         <!-- <input type="hidden" name="aid" value="{{albumId}}"> -->
@@ -104,9 +108,7 @@
             {% for photo in photos %}
                 <div class="grid-item">
                     <a href="/photo/{{photo.photoId}}">
-                    <!-- not sure how to properly display images yet -->
                     <img src='data:image/jpg;base64, {{ photo.data }}'/>
-                    <!-- <img src={{photo[2]}}/> -->
                     </a>
                 </div>
             {% endfor %}
@@ -115,7 +117,6 @@
 
     {% endif %}
 
-    <!-- TODO: create a modal for viewing each individual photo and its details -->
     <br/>
     <h3>Main Menu:</h3>
     <ul>
