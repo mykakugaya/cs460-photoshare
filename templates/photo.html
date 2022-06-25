@@ -14,7 +14,7 @@
 
     {% if photo %}
         <!-- not sure how to properly display images yet -->
-        <img src="{{photo}}" alt="{{caption}}" />
+        <img src="data:image/jpg;base64, {{photo}}" alt="{{caption}}" />
         <p>Caption: {{caption}}</p>
         <p>Date added: {{date}}</p>
         {% if comments %}
