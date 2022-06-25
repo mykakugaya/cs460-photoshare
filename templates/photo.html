@@ -20,7 +20,7 @@
         {% if comments %}
             <p>Comments:</p>
             {% for comment in comments %}
-                <p>{{comment.first_name}} {{comment.last_name}}: {{comment.text}}</p>
+                <p>{{comment[1]}} {{comment[2]}} ({{comment[3]}})<br >{{comment[4]}}</p>
             {% endfor %}
         {% endif %}
         {% if tags %}
