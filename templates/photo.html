@@ -1,0 +1,42 @@
+<!-- PHOTO PAGE: view photo, album info, caption, date_added, comments, tags, likes -->
+{% if message %}
+  <h4>{{message}}!</h4>
+{% endif %}
+<title>Photoshare</title>
+{% if name %}
+  <h1>Hello {{ name }}!</h1>
+{% endif %}
+
+{% if album %}
+    <h2>Name: {{album[1]}}</h2>
+    <p>Owner: {{owner}}</p>
+    <p>Date created: {{album[2]}}</p>
+
+    {% if photo %}
+        <!-- not sure how to properly display images yet -->
+        <img src="{{photo}}" alt="{{caption}}" />
+        <p>Caption: {{caption}}</p>
+        <p>Date added: {{date}}</p>
+        {% if comments %}
+            <p>Comments:</p>
+            {% for comment in comments %}
+                <p>{{comment.first_name}} {{comment.last_name}}: {{comment.text}}</p>
+            {% endfor %}
+        {% endif %}
+        {% if tags %}
+            <p>Tags:</p>
+            {% for tag in tags %}
+                <p>{{tag}}</p>
+            {% endfor %}
+        {% endif %}
+        <p>{{likes}} likes</p>
+        <!-- {% if likes %}
+            <p>Likes:</p>
+            {% for like in likes %}
+                <p>{{like.username}}</p>
+            {% endfor %}
+        {% endif %} -->
+    {% endif %}
+
+{% endif %}
+    

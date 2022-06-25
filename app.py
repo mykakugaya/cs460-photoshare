@@ -9,6 +9,7 @@ import flask_login
 import os, base64
 import datetime
 from dateutil import parser
+from PIL import Image
 
 mysql = MySQL()
 app = Flask(__name__)
@@ -152,14 +153,16 @@ def isEmailUnique(email):
 @app.route('/profile')
 @flask_login.login_required
 def protected():
-	albums = getUserAlbums(flask_login.current_user.id)
-	return render_template('profile.html', name=flask_login.current_user.id, message="Here is your profile", albumList=albums, user=flask_login.current_user.id)
-	
-@app.route('/profile/:uid')
-def profile(uid):
+	uid = getUserIdFromEmail(flask_login.current_user.id)
 	albums = getUserAlbums(uid)
-	user = getUserEmail(uid)
-	return render_template('profile.html', name=flask_login.current_user.id, message="Here is your profile", albumList=albums, user=user)
+	return render_template('profile.html', name=flask_login.current_user.id, message="Here is your profile", albums=albums, user=flask_login.current_user.id)
+	
+@app.route('/profile/<string:email>')
+def profile(email):
+	uid = getUserIdFromEmail(email)
+	albums = getUserAlbums(uid)
+	# user = getUserEmail(uid)
+	return render_template('profile.html', name=flask_login.current_user.id, message="Here is your profile", albums=albums, user=email)
 	
 # get user_id from user email
 def getUserIdFromEmail(email):
@@ -177,7 +180,8 @@ def getUserInfo(uid):
 def getUserEmail(uid):
 	cursor = conn.cursor()
 	cursor.execute("SELECT email FROM Users WHERE user_id = '{0}'".format(uid))
-	return cursor.fetchone()[0]
+	# print(cursor.fetchone()[0])
+	return str(cursor.fetchone()[0])
 
 # get all photos for a user
 def getUserPhotos(uid):
@@ -196,7 +200,7 @@ def getUserAlbums(uid):
 
 ### FRIENDS CODE ###
 # get all friends for a user
-@app.route('/friends/:uid')
+@app.route('/friends/<int:uid>')
 @flask_login.login_required
 def getFriends(uid):
 	cursor = conn.cursor()
@@ -204,7 +208,7 @@ def getFriends(uid):
 	return cursor.fetchall()
 
 # add a new friend for a user
-@app.route('/addFriend/:uid', methods=['GET'])
+@app.route('/addFriend/<int:uid>', methods=['GET'])
 @flask_login.login_required
 def addFriend(uid):
 	cursor = conn.cursor()
@@ -214,6 +218,7 @@ def addFriend(uid):
 
 ### ALBUM CODE ###
 # create new album
+# album.html: albumId, album (name), date, userEmail 
 @app.route('/new_album', methods=['GET', 'POST'])
 @flask_login.login_required
 def new_album():
@@ -232,25 +237,28 @@ def new_album():
 		cursor = conn.cursor()
 		cursor.execute("INSERT INTO Albums (name, date_created, user_id) VALUES ('{0}', '{1}', '{2}')".format(name, date_created, user_id))
 		conn.commit()
-		cursor.execute('''SELECT name, date_created FROM Albums WHERE album_id = LAST_INSERT_ID()''')
+		cursor.execute('''SELECT album_id, name, date_created FROM Albums WHERE album_id = LAST_INSERT_ID()''')
 		newAlbum = cursor.fetchone()
-		return render_template('album.html', name=flask_login.current_user.id, message='New Album Created', album=newAlbum[0], date=newAlbum[1])
+		return render_template('album.html', name=flask_login.current_user.id, message='New Album Created', albumId=newAlbum[0], album=newAlbum[1], date=newAlbum[2], numPhotos=0, owner=flask_login.current_user.id)
 
 # display one album and its photos
-@app.route('/album/:aid', methods=['GET'])
+# album.html: albumId, album (name), date, userEmail, photos
+@app.route('/album/<int:aid>', methods=['GET'])
 @flask_login.login_required
 def album(aid):
 	# get album info
 	albumInfo = getAlbumInfo(aid)
+	print(albumInfo[3])
+	owner = getUserEmail(albumInfo[3])
 	# get photos for this album
 	photos = getAlbumPhotos(aid)
-	return render_template('album.html', name=flask_login.current_user.id, message='Album', albumId=aid, album=albumInfo[0], date=albumInfo[1], photos=photos)
+	return render_template('album.html', name=flask_login.current_user.id, message='View Album', albumId=albumInfo[0], album=albumInfo[1], date=albumInfo[2], numPhotos=albumInfo[4], owner=owner, photos=photos)
 
 # get all photos in a specific album
 def getAlbumPhotos(album_id):
 	# conn = mysql.connect()
 	cursor = conn.cursor()
-	cursor.execute("SELECT caption, photo_id, data, likes FROM Photos WHERE album_id = '{0}'".format(album_id))
+	cursor.execute("SELECT caption, photo_id, data, num_likes FROM Photos WHERE album_id = '{0}'".format(album_id))
 	album_photos = [] 
 	for tup in cursor.fetchall():
 		photo_id = int(tup[1])
@@ -259,8 +267,9 @@ def getAlbumPhotos(album_id):
 			{
 				"photoId": photo_id,
 				"caption": str(tup[0]), 
-				"url": str(tup[2].decode()),
-				"likes": getPhotoLikes(photo_id),
+				"data": str(tup[2].decode()),
+				"likes": int(tup[3]),
+				# "likes": getPhotoLikes(photo_id),
 				"tags": [t[0] for t in tags]
 			}
 		)
@@ -269,33 +278,63 @@ def getAlbumPhotos(album_id):
 # get album info from album_id
 def getAlbumInfo(album_id):
 	cursor = conn.cursor()
-	cursor.execute("SELECT name, date_created FROM Albums WHERE album_id = '{0}'".format(album_id))
+	cursor.execute("SELECT album_id, name, date_created, user_id, num_photos FROM Albums WHERE album_id = '{0}'".format(album_id))
 	return cursor.fetchone()
+
+# get user id from album id
+def getUserIdFromAlbum(album_id):
+	cursor = conn.cursor()
+	cursor.execute("SELECT user_id FROM Albums WHERE album_id = '{0}'".format(album_id))
+	return cursor.fetchone()[0]
 
 ### END ALBUM CODE ###
 
 
 ### PHOTO CODE ###
 # photo page
-@app.route('/photo/:pid', methods=['GET'])
+# photo.html: photoId, albumId, caption, date, numlikes, tags, comments
+@app.route('/photo/<int:pid>', methods=['GET'])
 def photo(pid):
 	# get photo info
 	photoInfo = getPhotoInfo(pid)
+	caption = photoInfo.get('caption')
+	photo_data = photoInfo.get('data')
+	date = photoInfo.get('date')
+	numlikes = photoInfo.get('likes')
+	tags = photoInfo.get('tags')
+	comments = photoInfo.get('comments')
+
 	# get album info for this photo
-	albumInfo = getAlbumInfo(photoInfo[0])
-	# get tags for this photo
-	tags = getPhotoTags(pid)
-	# get comments for this photo
-	comments = getPhotoComments(pid)
-	# get likes for this photo
-	likes = getPhotoLikes(pid)
-	return render_template('photo.html', name=flask_login.current_user.id, message='Photo', photoId=pid, photo=photoInfo[2], album=albumInfo, date=photoInfo[3], caption=photoInfo[1], tags=tags, comments=comments, likes=likes)
+	albumInfo = getAlbumInfo(photoInfo.get('albumId'))
+
+	# get album owner
+	owner = getUserEmail(albumInfo[3])
+	return render_template('photo.html', name=flask_login.current_user.id, message='Photo', photoId=pid, caption=caption, photo=photo_data, date=date, album=albumInfo, owner=owner, tags=tags, comments=comments, likes=numlikes)
 
 # get photo info from photo_id
 def getPhotoInfo(pid):
 	cursor = conn.cursor()
-	cursor.execute("SELECT album_id, caption, data, date_created FROM Photos WHERE photo_id = '{0}'".format(pid))
-	return cursor.fetchone()
+	cursor.execute("SELECT caption, photo_id, data, num_likes, album_id, date_added FROM Photos WHERE photo_id = '{0}'".format(pid))
+	tup = cursor.fetchone()
+	photo_id = int(tup[1])
+	# get tags for this photo
+	tags = getPhotoTags(photo_id)
+	# get comments for this photo
+	comments = getPhotoComments(pid)
+	# get likes for this photo
+	# likes = getPhotoLikes(pid)
+	photoInfo = {
+			"photoId": photo_id,
+			"caption": str(tup[0]), 
+			"data": str(tup[2].decode()),
+			"date": str(tup[5]),
+			"tags": [t[0] for t in tags],
+			"comments": comments,
+			"likes": int(tup[3]),
+			"albumId": int(tup[4])
+		}
+	return photoInfo
+
 
 # photos uploaded using base64 encoding so they can be directly embeded in HTML
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
@@ -303,28 +342,69 @@ def allowed_file(filename):
 	return '.' in filename and filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
 
 # upload a photo to an album
-@app.route('/upload/:aid', methods=['GET', 'POST'])
+# album.html: albumId, album (name), date, userEmail, photos (once photo is uploaded)
+@app.route('/upload/<int:aid>', methods=['GET', 'POST'])
 @flask_login.login_required
 def upload_file(aid):
 	if request.method == 'POST':
-		uid = getUserIdFromEmail(flask_login.current_user.id)
-		album_id = aid
 		imgfile = request.files['photo']
-		photo_data = imgfile.read()
-		caption = request.form.get('caption')
-		date = datetime.date.today()
-		tags = request.form.get('tags')	## TODO: list of tags
+		if allowed_file(imgfile.filename):
+			uid = getUserIdFromEmail(flask_login.current_user.id)
+			album_id = aid
 
-		cursor = conn.cursor()
-		cursor.execute('''INSERT INTO Photos (user_id, album_id, data, caption, date_added) VALUES (%s, %s, %s )''', (uid, album_id, photo_data, caption, date))
-		conn.commit()
+			# Encode the file to get base64 string
+			photo_data = base64.b64encode(imgfile.read())
 
-		albumInfo = getAlbumInfo(album_id)
-		photos=getAlbumPhotos(album_id)
-		return render_template('album.html', name=flask_login.current_user.id, message='Photo uploaded!', albumId=album_id, album=albumInfo[0], date=albumInfo[1], photos=photos, base64=base64)
-	#The method is GET so we return a  HTML form to upload the a photo.
+			caption = request.form.get('caption')
+			date = datetime.date.today()
+			tagsStr = request.form.get('tags')
+			tags = tagsStr.split(', ')	 # split tags into a list
+
+			cursor = conn.cursor()
+			cursor.execute('''INSERT INTO Photos ( album_id, data, caption, date_added) VALUES (%s, %s, %s, %s )''', ( album_id, photo_data, caption, date))
+			conn.commit()
+
+			# get the photo_id of the photo we just uploaded
+			cursor.execute('''SELECT LAST_INSERT_ID() FROM Photos''') 
+			pid = cursor.fetchone()[0]
+
+			# update num_photos in albums
+			cursor.execute('''UPDATE Albums SET num_photos = num_photos + 1 WHERE album_id = %s''', (album_id))
+
+			# add tags to the photo in TaggedWith
+			for tag in tags:
+				tag = tag.lower()
+				# check if the tag exists 
+				cursor.execute("SELECT tag_id FROM Tags T WHERE T.word='{0}'".format(tag))
+				
+				fetched_tag = cursor.fetchone() 
+
+				# tag already exists
+				if fetched_tag: 
+					tag_id = fetched_tag[0]
+					cursor.execute('''UPDATE Tags SET num_tagged = num_tagged + 1 WHERE tag_id = {0}'''.format(tag_id)) 
+					conn.commit()
+					cursor.execute('''INSERT INTO TaggedWith (tag_id, photo_id) VALUES (%s, %s)''', (tag_id, pid))
+					conn.commit()
+				# create new tag
+				else:
+					cursor.execute('''INSERT INTO Tags (word) VALUES (%s)''', (tag))
+					conn.commit()
+					# last inserted tag_id
+					cursor.execute('''SELECT LAST_INSERT_ID() FROM Tags''') 
+					tag_id = cursor.fetchone()[0]
+					cursor.execute('''INSERT INTO TaggedWith (tag_id, photo_id) VALUES (%s, %s)''', (tag_id, pid))
+					conn.commit()
+
+			albumInfo = getAlbumInfo(album_id)
+			# photos=getAlbumPhotos(album_id)
+			# return render_template('album.html', name=flask_login.current_user.id, message='Photo uploaded!', albumId=album_id, album=albumInfo[1], date=albumInfo[2], photos=photos, base64=base64, owner=getUserEmail(albumInfo[3])) 
+			return flask.redirect(flask.url_for('photo', pid=pid))
+	#The method is GET: so if user reloads the page, it won't upload the same photo again
 	else:
-		return render_template('upload.html')
+		# albumInfo = getAlbumInfo(album_id)
+		# photos=getAlbumPhotos(album_id)
+		return flask.redirect(flask.url_for('album', aid=album_id))
 
 ### END PHOTO CODE ###
 
@@ -338,11 +418,11 @@ def getPhotoComments(photo_id):
 	return cursor.fetchall()
 
 # add a comment to a photo
-@app.route('/addComment/:pid', methods=['POST'])
+@app.route('/addComment/<int:pid>', methods=['POST'])
 def addComment(pid):
 	date = datetime.date.today()
 	if request.form.get('comment') == None:
-		return flask.redirect(flask.url_for('photo'), pid) # redirect to the photo page
+		return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
 	if user_id == None: 
 		user_id = 1000000
 		# anonymous user
@@ -353,7 +433,7 @@ def addComment(pid):
 	cursor = conn.cursor()
 	cursor.execute("INSERT INTO Comments (user_id, photo_id, text, date_posted) VALUES ({0}, {1}, '{2}', {3})".format(flask_login.current_user.id, pid, request.form.get('comment'), date))
 	conn.commit()
-	return flask.redirect(flask.url_for('photo'), pid) # redirect to the photo page
+	return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
 
 ### END COMMENTS CODE ###
 
@@ -363,19 +443,19 @@ def addComment(pid):
 def getPhotoTags(photo_id):
 	# conn = mysql.connect()
 	cursor = conn.cursor()
-	cursor.execute("SELECT T.name FROM Tags T, TaggedWith TW WHERE T.tag_id = TW.tag_id AND TW.photo_id = {0}".format(photo_id)) 
+	cursor.execute("SELECT T.word FROM Tags T, TaggedWith TW WHERE T.tag_id = TW.tag_id AND TW.photo_id = {0}".format(photo_id)) 
 	return cursor.fetchall()
 
 # add a tag to a photo
-@app.route('/addTag/:pid', methods=['POST'])
+@app.route('/addTag/<int:pid>', methods=['POST'])
 def addTag(pid):
 	tag = request.form.get('tag')
 	if tag == None:
-		return flask.redirect(flask.url_for('photo'), pid) # redirect to the photo page
+		return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
 	cursor = conn.cursor()
-	cursor.execute("INSERT INTO Tags (name) VALUES ('{0}')".format(tag))
+	cursor.execute("INSERT INTO Tags (word) VALUES ('{0}')".format(tag))
 	conn.commit()
-	return flask.redirect(flask.url_for('photo'), pid) # redirect to the photo page
+	return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
 
 ### END TAGS CODE ###
 
@@ -385,11 +465,12 @@ def addTag(pid):
 def getPhotoLikes(photo_id):
 	# conn = mysql.connect()
 	cursor = conn.cursor()
-	cursor.execute("SELECT COUNT(*) FROM Likes WHERE photo_id = {0}".format(photo_id)) 
+	cursor.execute("SELECT COUNT(*) FROM LikedBy WHERE photo_id = {0}".format(photo_id)) 
+	# print(cursor.fetchone()[0])
 	return cursor.fetchone()[0]
 
 # add a like to a photo
-@app.route('/addLike/:pid', methods=['POST'])
+@app.route('/addLike/<int:pid>', methods=['POST'])
 def addLike(pid):
 	if user_id == None: 
 		user_id = 1000000
@@ -400,22 +481,22 @@ def addLike(pid):
 			conn.commit()
 	# conn = mysql.connect()
 	cursor = conn.cursor() 
-	cursor.execute("INSERT INTO Liked_Photo (photo_id, user_id) VALUES (%s, %s)", (pid, user_id))
-	cursor.execute("UPDATE Photo SET likes = likes + 1 WHERE photo_id = {0}".format(pid))
+	cursor.execute("INSERT INTO LikedBy (photo_id, user_id) VALUES (%s, %s)", (pid, user_id))
+	cursor.execute("UPDATE Photos SET num_likes = num_likes + 1 WHERE photo_id = {0}".format(pid))
 	conn.commit()
-	return flask.redirect(flask.url_for('photo'), pid) # redirect to the photo page
+	return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
 
 ### END LIKES CODE ###
 
 
 ### SEARCH CODE ###
 # search for photos by tag
-@app.route('/search/:tag', methods=['GET'])
+@app.route('/search/<string:tag>', methods=['GET'])
 def searchTag(tag):
 	tag = tag.lower()
 	# conn = mysql.connect()
 	cursor = conn.cursor()
-	cursor.execute("SELECT P.photo_id, P.data, P.caption, P.date_added FROM Photos P, Tags T, TaggedWith TW WHERE P.photo_id = TW.photo_id AND TW.tag_id = T.tag_id AND T.name = '{0}'".format(tag)) 
+	cursor.execute("SELECT P.photo_id, P.data, P.caption, P.date_added FROM Photos P, Tags T, TaggedWith TW WHERE P.photo_id = TW.photo_id AND TW.tag_id = T.tag_id AND T.word = '{0}'".format(tag)) 
 	return render_template('search.html', name=flask_login.current_user.id, photos=cursor.fetchall())
 
 # search for a user

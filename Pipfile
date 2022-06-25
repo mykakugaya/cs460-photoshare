@@ -12,6 +12,7 @@ requests = "*"
 werkzeug = "*"
 cryptography = "*"
 python-dateutil = "*"
+pillow = "*"
 
 [dev-packages]
 
