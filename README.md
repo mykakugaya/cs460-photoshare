@@ -8,20 +8,22 @@
 3. Open `app.py` and change `app.config['MYSQL_DATABASE_PASSWORD'] = 'cs460'` to be your MySQL root password.
 4. Run `pipenv run python app.py` to start the server on http://localhost:5000 (open browser).
 
-## Application page endpoints
+## Application routes
 - '/': Landing page
-- '/browse': Browse all photos
+- '/browse': Browse all photos, search photos with specific tag(s)
 - '/explore': View top 10 contributing users and most popular tags
 - '/album/:aid': View an album and its photos
-- '/photo/:pid': View a photo and its caption, tags, likes, and comments
-- '/tag/:tag': View photos by unique tag word
+- '/photo/:pid': View a photo and its caption, tags, likes, and comments; Add comments to photo (liking photo requires login)
+- '/tag/:tag': View photos by unique tag word ('/tags/:tags' for multiple tag search in '/browse')
 - '/profile/:uid': View a user's profile
 - '/register': Create an account
 - '/login': Log into an existing account
 - '/unauth': Unauthorized page
 ### Login required:
 - '/profile': View my profile
+- '/new_album': Create a new album
 - '/upload/:aid': Upload a photo to my album
+
 
 ## SQL Schema
 ![ER Diagram](./er_diagram.jpg)
@@ -84,7 +86,3 @@ towards their contribution score as described above.
 __Like functionality.__ We want to add a Like functionality. If a user likes a photo, should be able
 to add a like to the photo. Also, we must be able to see how many likes a photo has and the
 users that liked this photo. Users cannot like their own photos.
-
-## Contributors:
-- Myka Kugaya (mkugaya@bu.edu)
-- Divyangna Bamalwa (dbamalwa@bu.edu)
