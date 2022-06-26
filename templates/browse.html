@@ -10,10 +10,16 @@
 <body>
     {% if photos %}
     <h2>Browse Photos</h2>
+        <!-- search bar to search photos by tag -->
+        <!-- redirects to tag page (/tag/<tag>) -->
+        <form action="/browse" method="POST">
+            <input type="text" name="tag" placeholder="Search by tag">
+            <input type="submit" value="Search">
+        </form>
         <div class="grid-container">
         {% for photo in photos %}
             <div class="grid-item">
-                <a href="/photo/{{photo.photoId}}">
+                <a href="/photo/{{photo.pid}}">
                 <img src='data:image/jpg;base64, {{ photo.data }}'/>
                 </a>
             </div>
@@ -26,7 +32,7 @@
     <ul>
         <li><a href='/'>Home</a></li>
         <li><a href='/explore'>Top Users and Tags</a></li>
-        {% if not name %}
+        {% if anonymous %}
             <li><a href='/login'>Login</a></li>
             <li><a href='/register'>or create an account</a></li>
         {% else %}

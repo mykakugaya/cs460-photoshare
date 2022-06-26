@@ -13,7 +13,7 @@
 - '/browse': Browse all photos
 - '/album/:aid': View an album and its photos
 - '/photo/:pid': View a photo and its caption, tags, likes, and comments
-- '/tag/:tid': View all photos tagged with a unique tag
+- '/tag/:tag': View photos by unique tag word
 - '/profile/:uid': View a user's profile
 - '/register': Create an account
 - '/login': Log into an existing account

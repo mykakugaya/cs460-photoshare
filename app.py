@@ -360,6 +360,31 @@ def photo(pid):
 
 # browse all photos
 # browse.html: photos
+@app.route('/browse', methods=['GET', 'POST'])
+def browse():
+	if flask.request.method == 'GET':
+		photos = getAllPhotos()
+		photosArr = []
+		for photo in photos:
+			photosArr.append({
+				'pid': photo[0],
+				'data': photo[1].decode()
+			})
+		# if a user is logged in
+		if flask_login.current_user.is_authenticated:
+			return render_template('browse.html', name=flask_login.current_user.id, message='Browse Photos', photos=photosArr)
+		else:
+			return render_template('browse.html', name="anonymous user", message='Browse Photos', photos=photosArr, anonymous=True)
+	elif flask.request.method == 'POST':
+		# tag search, redirect to tag page
+		tag = flask.request.form['tag']
+		return flask.redirect(flask.url_for('tag', tag=tag))
+
+# get all photos
+def getAllPhotos():
+	cursor = conn.cursor()
+	cursor.execute("SELECT photo_id, data FROM Photos")
+	return cursor.fetchall()
 
 # get photo info from photo_id
 def getPhotoInfo(pid):
