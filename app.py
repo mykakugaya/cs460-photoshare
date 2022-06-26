@@ -561,10 +561,12 @@ def tags(tags):
 		photos += getPhotosWithTag(tag)
 	photosArr = []
 	for photo in photos:
-		photosArr.append({
-			'pid': photo[0],
-			'data': photo[1].decode()
-		})
+		# skip duplicate pids
+		if photo not in photosArr:
+			photosArr.append({
+				'pid': photo[0],
+				'data': photo[1].decode()
+			})
 	# if logged in
 	if flask_login.current_user.is_authenticated:
 		return render_template('tag.html', name=flask_login.current_user.id, tags=tags, photos=photosArr)
@@ -633,19 +635,28 @@ def getPhotoComments(photo_id):
 @app.route('/addComment/<int:pid>', methods=['POST'])
 def addComment(pid):
 	date = datetime.date.today()
-	if request.form.get('comment') == None:
+	if request.form.get('comment') == '':
 		return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
-	if user_id == None: 
+	cursor = conn.cursor() 
+	comment = request.form.get('comment')
+	# if logged in
+	if flask_login.current_user.is_authenticated:
+		user_id = getUserIdFromEmail(flask_login.current_user.id)
+		cursor.execute("INSERT INTO Comments (photo_id, user_id, date_posted, text) VALUES (%s, %s, %s, %s)", (pid, user_id, date, comment))
+		conn.commit()
+		return flask.redirect(flask.url_for('photo', pid=pid))
+	# if not logged in
+	else:
 		user_id = 1000000
 		# anonymous user
-		cursor.execute("SELECT * FROM Users WHERE user_id = 1000000")
+		cursor.execute("SELECT * FROM Users WHERE user_id = {0}".format(user_id))
 		if not cursor.fetchone():
 			cursor.execute("INSERT INTO Users (user_id, first_name, last_name, email, password) VALUES ({0}, '{1}', '{2}', '{3}', '{4}')".format(user_id, "Anonymous", "User", "anon@anon.com", "anonymous"))
 			conn.commit()
-	cursor = conn.cursor()
-	cursor.execute("INSERT INTO Comments (user_id, photo_id, text, date_posted) VALUES ({0}, {1}, '{2}', {3})".format(flask_login.current_user.id, pid, request.form.get('comment'), date))
-	conn.commit()
-	return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
+		cursor = conn.cursor()
+		cursor.execute("INSERT INTO Comments (photo_id, user_id, date_posted, text) VALUES ({0}, {1}, '{2}', '{3}')".format(pid, user_id, date, comment))
+		conn.commit()
+		return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
 
 # remove a comment from a photo - login required
 @app.route('/removeComment/<int:pid>/<int:cid>', methods=['POST'])
@@ -684,17 +695,26 @@ def getTopUsers():
 	cursor.execute("SELECT U.user_id, U.first_name, U.last_name, COUNT(*) AS numComments FROM Users U, Comments C WHERE U.user_id = C.user_id GROUP BY U.user_id ORDER BY U.user_id")
 	userCommentScore = cursor.fetchall()
 	usersArr = []
+	# add numPhotos to totalScore
 	for user in userPhotoScore:
+		# if anonymous user, skip
+		if user[0] == 1000000:
+			continue
 		usersArr.append({
 			'uid': user[0],
 			'first_name': user[1],
 			'last_name': user[2],
 			'totalScore': user[3]
 		})
+	# add comment scores to total scores
 	for user in userCommentScore:
 		for i in range(len(usersArr)):
 			if usersArr[i]['uid'] == user[0]:
-				usersArr[i]['totalScore'] += int(usersArr[i]['numComments'])
+				usersArr[i]['totalScore'] += int(user[3])
+
+	# sort by total score, limit to first 10
+	usersArr = sorted(usersArr, key=lambda k: k['totalScore'], reverse=True)
+	usersArr = usersArr[:10]
 	return usersArr
 
 # get top 10 tags

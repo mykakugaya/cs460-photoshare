@@ -125,18 +125,17 @@
             {% endfor %}
             {% endif %}
 
+            <p>Comments:</p>
+            {% if name != owner %}
+            <form action='/addComment/{{photoId}}' method='POST'>
+                <input type='text' name='comment' placeholder='Add a comment'></input>
+                <input type='submit' value='Comment'></input>
+            </form>
+            {% endif %}
+            
             {% if comments %}
-                <p>Comments:</p>
-                {% if name != owner %}
-                    <form action='/addComment/{{photoId}}' method='POST'>
-                        <input type='text' name='comment' placeholder='Add a comment'></input>
-                        <input type='submit' value='Comment'></input>
-                    </form>
-                {% endif %}
- 
                 {% for comment in comments %}
-                    <p>{{comment[1]}} {{comment[2]}}: {{comment[5]}}</p>
-                    <p>{{comment[4]}}</p>
+                    <p><a href='profile/{{comment[0]}}'>{{comment[1]}} {{comment[2]}}</a> ({{comment[4]}}): {{comment[5]}}</p>
                     <!-- if comment[3] (email) = name, display delete comment btn  -->
                     {% if comment[3] == name and not anonymous %}
                         <form action='/removeComment/{{photoId}}/{{comment[0]}}' method='POST'>
@@ -144,6 +143,8 @@
                         </form>
                     {% endif %}
                 {% endfor %}
+            {% else %}
+                <p>No comments yet!</p>
             {% endif %}
     
             {% if name == owner %}
