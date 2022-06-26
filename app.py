@@ -380,7 +380,7 @@ def browse():
 	elif flask.request.method == 'POST':
 		# tag search, redirect to tag page
 		tag = flask.request.form['tag']
-		return flask.redirect(flask.url_for('tag', tag=tag))
+		return flask.redirect(flask.url_for('tags', tags=tag))
 
 # get all photos
 def getAllPhotos():
@@ -563,6 +563,31 @@ def tag(tag):
 	# if not logged in
 	else:
 		return render_template('tag.html', name='anonymous user', tag=tag, photos=photosArr, anonymous=True)
+
+# view photos by multiple tags
+# tag.html: tags, photos
+@app.route('/tags/<tags>')
+def tags(tags):
+	tags = tags.split(', ')
+	# if only one photo, redirect to tag
+	if len(tags) == 1:
+		return flask.redirect(flask.url_for('tag', tag=tags[0]))
+	photos = []
+	for tag in tags:
+		photos += getPhotosWithTag(tag)
+	photosArr = []
+	for photo in photos:
+		photosArr.append({
+			'pid': photo[0],
+			'data': photo[1].decode()
+		})
+	# if logged in
+	if flask_login.current_user.is_authenticated:
+		return render_template('tag.html', name=flask_login.current_user.id, tags=tags, photos=photosArr)
+	# if not logged in
+	else:
+		return render_template('tag.html', name='anonymous user', tags=tags, photos=photosArr, anonymous=True)
+
 
 ### END TAGS CODE ###
 

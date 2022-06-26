@@ -11,9 +11,10 @@
     {% if photos %}
     <h2>Browse Photos</h2>
         <!-- search bar to search photos by tag -->
-        <!-- redirects to tag page (/tag/<tag>) -->
+        <!-- redirects to tag page (/tags/<tag>) -->
         <form action="/browse" method="POST">
-            <input type="text" name="tag" placeholder="Search by tag">
+            <label for="tag">Search by Tag (separate tags with ', '):</label>
+            <input type="text" name="tag" placeholder="boston, spring">
             <input type="submit" value="Search">
         </form>
         <div class="grid-container">

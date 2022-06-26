@@ -20,9 +20,8 @@
 - '/login': Log into an existing account
 - '/unauth': Unauthorized page
 ### Login required:
-- '/profile': View my profile (if logged in)
-- '/upload/:aid': Upload a photo to an album
-
+- '/profile': View my profile
+- '/upload/:aid': Upload a photo to my album
 
 ## SQL Schema
 ![ER Diagram](./er_diagram.jpg)

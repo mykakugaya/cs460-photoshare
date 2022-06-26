@@ -8,7 +8,18 @@
 </head>
 
 <body>
+    {% if tag %}
     <h2>Tag: {{tag}}</h2>
+    {% endif %}
+    {% if tags %}
+    <h2>Tags:</h2>
+    <ul>
+        {% for tag in tags %}
+            <li><a href='/tag/{{tag}}'>{{tag}}</a></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
     {% if photos %}
         <div class="grid-container">
         {% for photo in photos %}
@@ -20,7 +31,11 @@
         {% endfor %}
         </div>
     {% else %}
+        {% if tag %}
         <h2>No photos tagged with {{tag}}.</h2>
+        {% elif tags %}
+        <h2>No photos tagged with those tags.</h2>
+        {% endif %}
     {% endif %}
 
     <br/>
