@@ -23,7 +23,7 @@
             {% if tags %}
                 <p>Tags:</p>
                 {% for tag in tags %}
-                    <p>{{tag}}</p>
+                    <p><a href='/tag/{{tag}}'>{{tag}}</a></p>
                 {% endfor %}
             {% endif %}
             <!-- popup modal to view users who liked the photo -->
