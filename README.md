@@ -1,6 +1,28 @@
 ## CS460 Project
 # PhotoShare: A simple on-line photo social network system
 
+## Starting the Flask Server
+1. Run `pipenv install` to create a virtualenv for this project and install the required dependencies.   
+  You may need to install pipenv first (`pip install --user pipenv`).  
+2. Run schema.sql script in MySQL Workbench to initialize the photoshare db.
+3. Open `app.py` and change `app.config['MYSQL_DATABASE_PASSWORD'] = 'cs460'` to be your MySQL root password.
+4. Run `pipenv run python app.py` to start the server on http://localhost:5000 (open browser).
+
+## Application page endpoints
+- '/': Landing page
+- '/browse': Browse all photos
+- '/album/:aid': View an album and its photos
+- '/photo/:pid': View a photo and its caption, tags, likes, and comments
+- '/tag/:tid': View all photos tagged with a unique tag
+- '/profile/:uid': View a user's profile
+- '/register': Create an account
+- '/login': Log into an existing account
+- '/unauth': Unauthorized page
+Login required:
+- '/profile': View my profile (if logged in)
+- '/upload/:aid': Upload a photo to an album
+
+
 ## SQL Schema
 ![ER Diagram](./er_diagram.jpg)
 - __Users__  
@@ -62,13 +84,6 @@ towards their contribution score as described above.
 __Like functionality.__ We want to add a Like functionality. If a user likes a photo, should be able
 to add a like to the photo. Also, we must be able to see how many likes a photo has and the
 users that liked this photo. Users cannot like their own photos.
-
-## Starting the Flask Server
-1. Run `pipenv install` to create a virtualenv for this project and install the required dependencies.   
-  You may need to install pipenv first (`pip install --user pipenv`).  
-2. Run schema.sql script in MySQL Workbench to initialize the photoshare db.
-3. Open `app.py` and change `app.config['MYSQL_DATABASE_PASSWORD'] = 'cs460'` to be your MySQL root password.
-4. Run `pipenv run python app.py` to start the server on http://localhost:5000 (open browser).
 
 ## Contributors:
 - Myka Kugaya (mkugaya@bu.edu)

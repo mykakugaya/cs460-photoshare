@@ -2,54 +2,62 @@
 <!-- {% if message %}
   <h4>{{message}}!</h4>
 {% endif %} -->
-<title>Photoshare</title>
-{% if name %}
+<head>
+    <base href="http://localhost:5000/">
+    <title>Photoshare</title>
+    {% if name %}
     <h3>Hello, {{ name }}!</h3>
-{% endif %}
-
-{% if album %}
-    <h3>Album name: <a href='album/{{album[0]}}'>{{album[1]}}</a></h3>
-    <p>Owner: {{owner}}</p>
-    <p>Date created: {{album[2]}}</p>
-
-    {% if photo %}
-        <img src="data:image/jpg;base64, {{photo}}" alt="{{caption}}" />
-        <p>Date added: {{date}}</p>
-        <p>Caption: {{caption}}</p>
-        {% if tags %}
-            <p>Tags:</p>
-            {% for tag in tags %}
-                <p>{{tag}}</p>
-            {% endfor %}
-        {% endif %}
-        <!-- popup modal to view users who liked the photo -->
-        <p>{{numLikes}} likes</p>
-        {% if comments %}
-            <p>Comments:</p>
-            {% for comment in comments %}
-                <p>{{comment[1]}} {{comment[2]}} ({{comment[3]}})<br >{{comment[4]}}</p>
-            {% endfor %}
-        {% endif %}
-
-        {% if name == owner %}
-        <!-- DELETE PHOTO BTN -->
-        <form action='/delete_photo/{{photoId}}' method='POST'>
-            <input type='submit' value='Delete Photo'></input>
-        </form>
-        {% endif %}
     {% endif %}
+</head>
 
-{% endif %}
-
-<br/>
-    <h3>Main Menu:</h3>
-    <ul>
-        {% if not name %}
-        <li><a href='/login'>Login</a></li>
-        <li><a href='/register'>or create an account</a></li>
-        {% endif %}
-        <li><a href='/'>Home</a> </li>
-        <li><a href='/profile'>My Profile</a> </li>
-        <li><a href='/logout'>Logout</a> </li>
-    </ul>
+<body>
+    {% if album %}
+        <h3>Album name: <a href='album/{{album[0]}}'>{{album[1]}}</a></h3>
+        <p>Owner: {{owner}}</p>
+        <p>Date created: {{album[2]}}</p>
     
+        {% if photo %}
+            <img src="data:image/jpg;base64, {{photo}}" alt="{{caption}}" />
+            <p>Date added: {{date}}</p>
+            <p>Caption: {{caption}}</p>
+            {% if tags %}
+                <p>Tags:</p>
+                {% for tag in tags %}
+                    <p>{{tag}}</p>
+                {% endfor %}
+            {% endif %}
+            <!-- popup modal to view users who liked the photo -->
+            <p>{{numLikes}} likes</p>
+            {% if comments %}
+                <p>Comments:</p>
+                {% for comment in comments %}
+                    <p>{{comment[1]}} {{comment[2]}} ({{comment[3]}})<br >{{comment[4]}}</p>
+                {% endfor %}
+            {% endif %}
+    
+            {% if name == owner %}
+            <!-- DELETE PHOTO BTN -->
+            <form action='/delete_photo/{{photoId}}' method='POST'>
+                <input type='submit' value='Delete Photo'></input>
+            </form>
+            {% endif %}
+        {% endif %}
+    
+    {% endif %}
+    
+    <br/>
+        <h3>Main Menu:</h3>
+        <ul>
+            <li><a href='/'>Home</a></li>
+            <li><a href='/browse'>Browse Photos</a></li>
+            <li><a href='/explore'>Top Users and Tags</a></li>
+            {% if anonymous %}
+                <li><a href='/login'>Login</a></li>
+                <li><a href='/register'>or create an account</a></li>
+            {% else %}
+                <li><a href='/profile'>My Profile</a></li>
+                <li><a href='/logout'>Logout</a></li>
+            {% endif %}
+        </ul>
+        
+</body>

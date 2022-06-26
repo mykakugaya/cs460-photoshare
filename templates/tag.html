@@ -1,0 +1,40 @@
+<!-- CLICK ON A TAG TO SEE ALL PHOTOS TAGGED WITH THAT TAG -->
+<head>
+    <base href="http://localhost:5000/">
+    <title>Photoshare</title>
+    {% if name %}
+        <h3>Hello, {{ name }}!</h3>
+    {% endif %}
+</head>
+
+<body>
+    <h2>Tag: {{tag}}</h2>
+    {% if photos %}
+        <div class="grid-container">
+        {% for photo in photos %}
+            <div class="grid-item">
+                <a href="/photo/{{photo.pid}}">
+                <img src='data:image/jpg;base64, {{ photo.data }}'/>
+                </a>
+            </div>
+        {% endfor %}
+        </div>
+    {% else %}
+        <h2>No photos tagged with {{tag}}.</h2>
+    {% endif %}
+
+    <br/>
+    <h3>Main Menu:</h3>
+    <ul>
+        <li><a href='/'>Home</a></li>
+        <li><a href='/browse'>Browse Photos</a></li>
+        <li><a href='/explore'>Top Users and Tags</a></li>
+        {% if anonymous %}
+            <li><a href='/login'>Login</a></li>
+            <li><a href='/register'>or create an account</a></li>
+        {% else %}
+            <li><a href='/profile'>My Profile</a></li>
+            <li><a href='/logout'>Logout</a></li>
+        {% endif %}
+    </ul>
+</body>

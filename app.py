@@ -156,20 +156,23 @@ def protected():
 	uid = getUserIdFromEmail(flask_login.current_user.id)
 	albums = getUserAlbums(uid)
 	friends = getUserFriends(uid)
-	print(friends)
-	return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=flask_login.current_user.id, id=getUserIdFromEmail(flask_login.current_user.id), myFriends=friends)
+	userInfo = getUserInfo(uid)
+	return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=userInfo, id=getUserIdFromEmail(flask_login.current_user.id), myFriends=friends)
 	
 @app.route('/profile/<int:uid>')
 def profile(uid):
-	# uid = getUserIdFromEmail(email)
 	albums = getUserAlbums(uid)
-	email = getUserEmail(uid)
+	userInfo = getUserInfo(uid)
 	friends = getUserFriends(uid)
-	myFriends = getUserFriends(getUserIdFromEmail(flask_login.current_user.id))
-	if email == flask_login.current_user.id:
-		return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=email, id=uid, friends=friends, myFriends=myFriends)
+	# if a user is logged in
+	if flask_login.current_user.is_authenticated:
+		myFriends = getUserFriends(getUserIdFromEmail(flask_login.current_user.id))
+		if userInfo[3] == flask_login.current_user.id:
+			return flask.redirect(flask.url_for('protected'))
+		else:
+			return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=userInfo, id=uid, friends=friends, myFriends=myFriends, myId=getUserIdFromEmail(flask_login.current_user.id))
 	else:
-		return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=email, id=uid, friends=friends, myFriends=myFriends, myId=getUserIdFromEmail(flask_login.current_user.id))
+		return render_template('profile.html', name="anonymous user", message="Profile Page", albums=albums, user=userInfo, id=uid, friends=friends, myId=1000000, anonymous=True)
 	
 # get user_id from user email
 def getUserIdFromEmail(email):
@@ -193,8 +196,8 @@ def getUserEmail(uid):
 # get all photos for a user
 def getUserPhotos(uid):
 	cursor = conn.cursor()
-	cursor.execute("SELECT imgdata, picture_id, caption FROM Photos WHERE user_id = '{0}'".format(uid))
-	return cursor.fetchall() #NOTE return a list of tuples, [(imgdata, pid, caption), ...]
+	cursor.execute("SELECT caption, photo_id, data, num_likes, date_added, album_id FROM Photos P, Users U, Albums A WHERE P.album_id = A.album_id AND A.user_id = U.user_id AND U.user_id = '{0}'".format(uid))
+	return convertTupToPhotosList(cursor.fetchall())
 
 # get all albums for a user
 def getUserAlbums(uid):
@@ -220,7 +223,7 @@ def getUserFriends(uid):
 @flask_login.login_required
 def addFriend(uid):
 	cursor = conn.cursor()
-	cursor.execute("INSERT INTO FriendsWith (user1_id, user2_id) VALUES ({0}, {1})".format(flask_login.current_user.id, uid))
+	cursor.execute("INSERT INTO FriendsWith (user1_id, user2_id) VALUES ({0}, {1})".format(getUserIdFromEmail(flask_login.current_user.id), uid))
 	conn.commit()
 	return flask.redirect(flask.url_for('protected'))
 
@@ -229,7 +232,7 @@ def addFriend(uid):
 @flask_login.login_required
 def removeFriend(uid):
 	cursor = conn.cursor()
-	cursor.execute("DELETE FROM FriendsWith WHERE user1_id = {0} AND user2_id = {1} OR user1_id = {1} AND user2_id = {0}".format(flask_login.current_user.id, uid))
+	cursor.execute("DELETE FROM FriendsWith WHERE user1_id = {0} AND user2_id = {1} OR user1_id = {1} AND user2_id = {0}".format(getUserIdFromEmail(flask_login.current_user.id), uid))
 	conn.commit()
 	return flask.redirect(flask.url_for('protected'))
 
@@ -240,7 +243,6 @@ def removeFriend(uid):
 # display one album and its photos
 # album.html: albumId, album (name), date, userEmail, photos
 @app.route('/album/<int:aid>', methods=['GET'])
-@flask_login.login_required
 def album(aid):
 	# get album info
 	albumInfo = getAlbumInfo(aid)
@@ -248,7 +250,11 @@ def album(aid):
 	owner = getUserEmail(albumInfo[3])
 	# get photos for this album
 	photos = getAlbumPhotos(aid)
-	return render_template('album.html', name=flask_login.current_user.id, message='View Album', albumId=albumInfo[0], album=albumInfo[1], date=albumInfo[2], numPhotos=albumInfo[4], owner=owner, photos=photos)
+	# if a user is logged in
+	if flask_login.current_user.is_authenticated:
+		return render_template('album.html', name=flask_login.current_user.id, message='View Album', albumId=albumInfo[0], album=albumInfo[1], date=albumInfo[2], numPhotos=albumInfo[4], owner=owner, photos=photos)
+	else:
+		return render_template('album.html', name="anonymous user", message='View Album', albumId=albumInfo[0], album=albumInfo[1], date=albumInfo[2], numPhotos=albumInfo[4], owner=owner, photos=photos, anonymous=True)
 
 # create new album
 # album.html: albumId, album (name), date, userEmail 
@@ -288,23 +294,29 @@ def delete_album(aid):
 def getAlbumPhotos(album_id):
 	# conn = mysql.connect()
 	cursor = conn.cursor()
-	cursor.execute("SELECT caption, photo_id, data, num_likes, date_added FROM Photos WHERE album_id = '{0}'".format(album_id))
-	album_photos = [] 
-	for tup in cursor.fetchall():
+	cursor.execute("SELECT caption, photo_id, data, num_likes, date_added, album_id FROM Photos WHERE album_id = '{0}'".format(album_id))
+	return convertTupToPhotosList(cursor.fetchall())
+
+# receives a list of tuples, each tuple has (caption, photo_id, data, num_likes, date_added, album_id)
+# convert to array for album.html and explore.html
+def convertTupToPhotosList(photos):
+	photosArr = [] 
+	for tup in photos:
 		photo_id = int(tup[1])
 		tags = getPhotoTags(photo_id)		# get all tags for each photo in album
-		album_photos.append(
+		photosArr.append(
 			{
 				"photoId": photo_id,
 				"caption": str(tup[0]), 
 				"data": str(tup[2].decode()),
 				"numLikes": int(tup[3]),
-				# "likes": getPhotoLikes(photo_id),
 				"tags": [t[0] for t in tags],
-				"date": str(tup[4])
+				"date": str(tup[4]),
+				"albumId": int(tup[5])
+				# "likes": getPhotoLikes(photo_id)
 			}
 		)
-	return album_photos
+	return photosArr
 
 # get album info from album_id
 def getAlbumInfo(album_id):
@@ -340,7 +352,14 @@ def photo(pid):
 
 	# get album owner
 	owner = getUserEmail(albumInfo[3])
-	return render_template('photo.html', name=flask_login.current_user.id, message='Photo', photoId=pid, caption=caption, photo=photo_data, date=date, album=albumInfo, owner=owner, tags=tags, comments=comments, numLikes=numlikes)
+	# if a user is logged in
+	if flask_login.current_user.is_authenticated:
+		return render_template('photo.html', name=flask_login.current_user.id, message='Photo', photoId=pid, caption=caption, photo=photo_data, date=date, album=albumInfo, owner=owner, tags=tags, comments=comments, numLikes=numlikes)
+	else:
+		return render_template('photo.html', name="anonymous user", message='Photo', photoId=pid, caption=caption, photo=photo_data, date=date, album=albumInfo, owner=owner, tags=tags, comments=comments, numLikes=numlikes, anonymous=True)
+
+# browse all photos
+# browse.html: photos
 
 # get photo info from photo_id
 def getPhotoInfo(pid):
@@ -499,27 +518,49 @@ def getPhotoTags(photo_id):
 	cursor.execute("SELECT T.word FROM Tags T, TaggedWith TW WHERE T.tag_id = TW.tag_id AND TW.photo_id = {0}".format(photo_id)) 
 	return cursor.fetchall()
 
-# add a tag to a photo
-@app.route('/addTag/<int:pid>', methods=['POST'])
-def addTag(pid):
-	tag = request.form.get('tag')
-	if tag == None:
-		return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
+# get all photos with a tag
+def getPhotosWithTag(tag):
 	cursor = conn.cursor()
-	cursor.execute("INSERT INTO Tags (word) VALUES ('{0}')".format(tag))
-	conn.commit()
-	return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
+	cursor.execute("SELECT P.photo_id, P.data FROM Photos P, Tags T, TaggedWith TW WHERE P.photo_id = TW.photo_id AND TW.tag_id = T.tag_id AND T.word = '{0}'".format(tag)) 
+	return cursor.fetchall()
+
+# view photos by tag
+# tag.html: tag, photos
+@app.route('/tag/<tag>')
+def tag(tag):
+	photos = getPhotosWithTag(tag)
+	photosArr = []
+	for photo in photos:
+		photosArr.append({
+			'pid': photo[0],
+			'data': photo[1].decode()
+		})
+	# if logged in
+	if flask_login.current_user.is_authenticated:
+		return render_template('tag.html', name=flask_login.current_user.id, tag=tag, photos=photosArr)
+	# if not logged in
+	else:
+		return render_template('tag.html', name='anonymous user', tag=tag, photos=photosArr, anonymous=True)
+
+# add a tag to a photo
+# @app.route('/addTag/<int:pid>', methods=['POST'])
+# def addTag(pid):
+# 	tag = request.form.get('tag')
+# 	if tag == None:
+# 		return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
+# 	cursor = conn.cursor()
+# 	cursor.execute("INSERT INTO Tags (word) VALUES ('{0}')".format(tag))
+# 	conn.commit()
+# 	return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
 
 ### END TAGS CODE ###
 
 
 ### LIKES CODE ###
-# get all likes on a photo
+# get list of users who liked a photo
 def getPhotoLikes(photo_id):
-	# conn = mysql.connect()
 	cursor = conn.cursor()
 	cursor.execute("SELECT COUNT(*) FROM LikedBy WHERE photo_id = {0}".format(photo_id)) 
-	# print(cursor.fetchone()[0])
 	return cursor.fetchone()[0]
 
 # add a like to a photo
@@ -532,7 +573,6 @@ def addLike(pid):
 		if not cursor.fetchone():
 			cursor.execute("INSERT INTO Users (user_id, first_name, last_name, email, password) VALUES ({0}, '{1}', '{2}', '{3}', '{4}')".format(user_id, "Anonymous", "User", "anon@anon.com", "anonymous"))
 			conn.commit()
-	# conn = mysql.connect()
 	cursor = conn.cursor() 
 	cursor.execute("INSERT INTO LikedBy (photo_id, user_id) VALUES (%s, %s)", (pid, user_id))
 	cursor.execute("UPDATE Photos SET num_likes = num_likes + 1 WHERE photo_id = {0}".format(pid))
@@ -542,25 +582,21 @@ def addLike(pid):
 ### END LIKES CODE ###
 
 
-### SEARCH CODE ###
-# search for photos by tag
-@app.route('/search/<string:tag>', methods=['GET'])
-def searchTag(tag):
-	tag = tag.lower()
-	# conn = mysql.connect()
-	cursor = conn.cursor()
-	cursor.execute("SELECT P.photo_id, P.data, P.caption, P.date_added FROM Photos P, Tags T, TaggedWith TW WHERE P.photo_id = TW.photo_id AND TW.tag_id = T.tag_id AND T.word = '{0}'".format(tag)) 
-	return render_template('search.html', name=flask_login.current_user.id, photos=cursor.fetchall())
+### TOP USERS AND TAGS CODE ###
 
-# search for a user
-# @app.route('/search/:user', methods=['GET'])
-# def searchUser(user):
+
+### END TOP USERS AND TAGS CODE ###
 
 
 # Default landing page
 @app.route("/", methods=['GET'])
 def hello():
-	return render_template('hello.html', message='Welcome to Photoshare')
+	# if user is logged in
+	if flask_login.current_user.is_authenticated:
+		return render_template('hello.html', name=flask_login.current_user.id, message='Welcome to Photoshare')
+	# if user is not logged in
+	else:
+		return render_template('hello.html', name='anonymous user', message='Welcome to Photoshare', anonymous=True)
 
 
 if __name__ == "__main__":

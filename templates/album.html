@@ -46,6 +46,7 @@
     <!-- {% if message %}
     <h4>{{message}}!</h4>
     {% endif %} -->
+    <base href="http://localhost:5000/">
     <title>Photoshare</title>
     {% if name %}
     <h3>Hello, {{ name }}!</h3>
@@ -65,7 +66,7 @@
 
     <!-- if album passed in, display album details -->
     {% if album %}
-        <h2>Name: {{album}}</h2>
+        <h2>Album Name: {{album}}</h2>
         <p>Owner: {{owner}}</p>
         <p>Date created: {{date}}</p>
         <p>{{numPhotos}} photos</p>
@@ -103,7 +104,7 @@
         {% endif %}
     
         {% if photos %}
-        <h2>Here are your photos</h2>
+        <h2>Album photos</h2>
             <div class="grid-container">
             {% for photo in photos %}
                 <div class="grid-item">
@@ -120,13 +121,16 @@
     <br/>
     <h3>Main Menu:</h3>
     <ul>
-        {% if not name %}
-        <li><a href='/login'>Login</a></li>
-        <li><a href='/register'>or create an account</a></li>
+        <li><a href='/'>Home</a></li>
+        <li><a href='/browse'>Browse Photos</a></li>
+        <li><a href='/explore'>Top Users and Tags</a></li>
+        {% if anonymous %}
+            <li><a href='/login'>Login</a></li>
+            <li><a href='/register'>or create an account</a></li>
+        {% else %}
+            <li><a href='/profile'>My Profile</a></li>
+            <li><a href='/logout'>Logout</a></li>
         {% endif %}
-        <li><a href='/'>Home</a> </li>
-        <li><a href='/profile'>My Profile</a> </li>
-        <li><a href='/logout'>Logout</a> </li>
     </ul>
 
 

@@ -1,20 +1,26 @@
 <!-- LANDING PAGE -->
-{% if message %}
-  <h1>{{message}}!</h1>
-{% endif %}
-<title>Photoshare</title>
-{% if name %}
-  <h3>Hello, {{ name }}!</h3>
-{% endif %}
-
-<h3>Main Menu:</h3>
-<ul>
-  {% if not name %}
-    <li><a href='/login'>Login</a></li>
-    <li><a href='/register'>or Register</a></li>
-  {% else %}
-    <!-- <li><a href='/explore'>Explore</a></li> -->
-    <li><a href='/profile'>My Profile</a></li>
-    <li><a href='/logout'>Logout</a></li>
+<head>
+  <base href="http://localhost:5000/">
+  {% if message %}
+    <h1>{{message}}!</h1>
   {% endif %}
-</ul>
+  <title>Home</title>
+  {% if name %}
+    <h3>Hello, {{ name }}!</h3>
+  {% endif %}
+</head>
+
+<body>
+  <h3>Main Menu:</h3>
+  <ul>
+    <li><a href='/browse'>Browse Photos</a></li>
+    <li><a href='/explore'>Top Users and Tags</a></li>
+    {% if anonymous %}
+        <li><a href='/login'>Login</a></li>
+        <li><a href='/register'>or create an account</a></li>
+    {% else %}
+        <li><a href='/profile'>My Profile</a></li>
+        <li><a href='/logout'>Logout</a></li>
+    {% endif %}
+  </ul>
+</body>

@@ -1,0 +1,37 @@
+<!-- BROWSE ALL PHOTOS (clicking on photo gives access to album) -->
+<head>
+    <base href="http://localhost:5000/">
+    <title>Photoshare</title>
+    {% if name %}
+        <h3>Hello, {{ name }}!</h3>
+    {% endif %}
+</head>
+
+<body>
+    {% if photos %}
+    <h2>Browse Photos</h2>
+        <div class="grid-container">
+        {% for photo in photos %}
+            <div class="grid-item">
+                <a href="/photo/{{photo.photoId}}">
+                <img src='data:image/jpg;base64, {{ photo.data }}'/>
+                </a>
+            </div>
+        {% endfor %}
+        </div>
+    {% endif %}
+
+    <br/>
+    <h3>Main Menu:</h3>
+    <ul>
+        <li><a href='/'>Home</a></li>
+        <li><a href='/explore'>Top Users and Tags</a></li>
+        {% if not name %}
+            <li><a href='/login'>Login</a></li>
+            <li><a href='/register'>or create an account</a></li>
+        {% else %}
+            <li><a href='/profile'>My Profile</a></li>
+            <li><a href='/logout'>Logout</a></li>
+        {% endif %}
+    </ul>
+</body>
