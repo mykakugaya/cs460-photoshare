@@ -568,7 +568,7 @@ def tag(tag):
 # tag.html: tags, photos
 @app.route('/tags/<tags>')
 def tags(tags):
-	tags = tags.split(', ')
+	tags = tags.split(' ')
 	# if only one photo, redirect to tag
 	if len(tags) == 1:
 		return flask.redirect(flask.url_for('tag', tag=tags[0]))

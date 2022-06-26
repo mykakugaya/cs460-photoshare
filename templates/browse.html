@@ -13,8 +13,9 @@
         <!-- search bar to search photos by tag -->
         <!-- redirects to tag page (/tags/<tag>) -->
         <form action="/browse" method="POST">
-            <label for="tag">Search by Tag (separate tags with ', '):</label>
-            <input type="text" name="tag" placeholder="boston, spring">
+            <label for="tag">Filter by Tag(s) (separate tags with spaces):</label>
+            <br><br/>
+            <input type="text" name="tag" placeholder="e.g., boston spring">
             <input type="submit" value="Search">
         </form>
         <div class="grid-container">
