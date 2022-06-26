@@ -1,5 +1,27 @@
 <!-- BROWSE ALL PHOTOS (clicking on photo gives access to album) -->
 <head>
+    <style>
+        body {font-family: Arial, Helvetica, sans-serif;}
+
+        .img-responsive {
+            max-width: 100%;
+            max-height: 100%;
+            display: flex;
+            height: auto;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-content: stretch;
+            justify-content: space-evenly;
+            align-items: center;
+        }
+
+        .photoGrid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-gap: 10px;
+        }
+
+    </style>
     <base href="http://localhost:5000/">
     <title>Photoshare</title>
     {% if name %}
@@ -18,11 +40,11 @@
             <input type="text" name="tag" placeholder="e.g., boston spring">
             <input type="submit" value="Search">
         </form>
-        <div class="grid-container">
+        <div class="grid-container photoGrid">
         {% for photo in photos %}
             <div class="grid-item">
                 <a href="/photo/{{photo.pid}}">
-                <img src='data:image/jpg;base64, {{ photo.data }}'/>
+                <img src='data:image/jpg;base64, {{ photo.data }}' class="img-responsive"/>
                 </a>
             </div>
         {% endfor %}

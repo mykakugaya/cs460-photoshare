@@ -96,7 +96,8 @@ def login():
 @app.route('/logout')
 def logout():
 	flask_login.logout_user()
-	return render_template('hello.html', message='Logged out')
+	return render_template('hello.html', name='anonymous user', message='Welcome to Photoshare', anonymous=True)
+
 
 @login_manager.unauthorized_handler
 def unauthorized_handler():
@@ -314,8 +315,8 @@ def convertTupToPhotosList(photos):
 				"numLikes": int(tup[3]),
 				"tags": [t[0] for t in tags],
 				"date": str(tup[4]),
-				"albumId": int(tup[5])
-				# "likes": getPhotoLikes(photo_id)
+				"albumId": int(tup[5]),
+				"likes": getPhotoLikes(photo_id)
 			}
 		)
 	return photosArr
@@ -345,20 +346,31 @@ def photo(pid):
 	caption = photoInfo.get('caption')
 	photo_data = photoInfo.get('data')
 	date = photoInfo.get('date')
-	numlikes = photoInfo.get('likes')
+	numlikes = photoInfo.get('numLikes')
+	likes = photoInfo.get('likes')
 	tags = photoInfo.get('tags')
 	comments = photoInfo.get('comments')
 
 	# get album info for this photo
 	albumInfo = getAlbumInfo(photoInfo.get('albumId'))
-
 	# get album owner
 	owner = getUserEmail(albumInfo[3])
+
 	# if a user is logged in
-	if flask_login.current_user.is_authenticated:
-		return render_template('photo.html', name=flask_login.current_user.id, message='Photo', photoId=pid, caption=caption, photo=photo_data, date=date, album=albumInfo, owner=owner, tags=tags, comments=comments, numLikes=numlikes)
+	if flask_login.current_user.is_authenticated and likes is not None:
+		# has the user already liked this photo? see if user email in photoLikes
+		uid = getUserIdFromEmail(flask_login.current_user.id)
+		liked = False	# false if user has not liked this photo
+		for like in likes:
+			# if user has already liked this photo, set liked to true
+			if like.get('uid') == uid:
+				liked = True
+				break
+		return render_template('photo.html', name=flask_login.current_user.id, message='Photo', photoId=pid, caption=caption, photo=photo_data, date=date, album=albumInfo, owner=owner, tags=tags, comments=comments, numLikes=numlikes, likedUsers=likes, liked=liked)
+	elif flask_login.current_user.is_authenticated and likes is None:
+		return render_template('photo.html', name=flask_login.current_user.id, message='Photo', photoId=pid, caption=caption, photo=photo_data, date=date, album=albumInfo, owner=owner, tags=tags, comments=comments, numLikes=numlikes, likedUsers=likes, liked=False)
 	else:
-		return render_template('photo.html', name="anonymous user", message='Photo', photoId=pid, caption=caption, photo=photo_data, date=date, album=albumInfo, owner=owner, tags=tags, comments=comments, numLikes=numlikes, anonymous=True)
+		return render_template('photo.html', name="anonymous user", message='Photo', photoId=pid, caption=caption, photo=photo_data, date=date, album=albumInfo, owner=owner, tags=tags, comments=comments, numLikes=numlikes, likedUsers=likes, anonymous=True)
 
 # browse all photos
 # browse.html: photos
@@ -398,8 +410,8 @@ def getPhotoInfo(pid):
 	tags = getPhotoTags(photo_id)
 	# get comments for this photo
 	comments = getPhotoComments(pid)
-	# get likes for this photo
-	# likes = getPhotoLikes(pid)
+	# get users who liked this photo
+	likes = getPhotoLikes(pid)
 	photoInfo = {
 			"photoId": photo_id,
 			"caption": str(tup[0]), 
@@ -407,8 +419,9 @@ def getPhotoInfo(pid):
 			"date": str(tup[5]),
 			"tags": [t[0] for t in tags],
 			"comments": comments,
-			"likes": int(tup[3]),
-			"albumId": int(tup[4])
+			"numLikes": int(tup[3]),
+			"albumId": int(tup[4]),
+			"likes": likes
 		}
 	return photoInfo
 
@@ -435,7 +448,7 @@ def upload_file(aid):
 			caption = request.form.get('caption')
 			date = datetime.date.today()
 			tagsStr = request.form.get('tags')
-			tags = tagsStr.split(', ')	 # split tags into a list
+			tags = tagsStr.split(' ')	 # split tags into a list
 
 			cursor = conn.cursor()
 			cursor.execute('''INSERT INTO Photos ( album_id, data, caption, date_added) VALUES (%s, %s, %s, %s )''', ( album_id, photo_data, caption, date))
@@ -503,35 +516,6 @@ def delete_photo(pid):
 ### END PHOTO CODE ###
 
 
-### COMMENTS CODE ###
-# get all comments on a photo
-def getPhotoComments(photo_id):
-	# conn = mysql.connect()
-	cursor = conn.cursor()
-	cursor.execute("SELECT U.user_id, U.first_name, U.last_name, C.date_posted, C.text FROM Comments C, Users U WHERE U.user_id = C.user_id AND photo_id = {0}".format(photo_id)) 
-	return cursor.fetchall()
-
-# add a comment to a photo
-@app.route('/addComment/<int:pid>', methods=['POST'])
-def addComment(pid):
-	date = datetime.date.today()
-	if request.form.get('comment') == None:
-		return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
-	if user_id == None: 
-		user_id = 1000000
-		# anonymous user
-		cursor.execute("SELECT * FROM Users WHERE user_id = 1000000")
-		if not cursor.fetchone():
-			cursor.execute("INSERT INTO Users (user_id, first_name, last_name, email, password) VALUES ({0}, '{1}', '{2}', '{3}', '{4}')".format(user_id, "Anonymous", "User", "anon@anon.com", "anonymous"))
-			conn.commit()
-	cursor = conn.cursor()
-	cursor.execute("INSERT INTO Comments (user_id, photo_id, text, date_posted) VALUES ({0}, {1}, '{2}', {3})".format(flask_login.current_user.id, pid, request.form.get('comment'), date))
-	conn.commit()
-	return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
-
-### END COMMENTS CODE ###
-
-
 ### TAGS CODE ###
 # get all tags on a photo
 def getPhotoTags(photo_id):
@@ -596,12 +580,61 @@ def tags(tags):
 # get list of users who liked a photo
 def getPhotoLikes(photo_id):
 	cursor = conn.cursor()
-	cursor.execute("SELECT COUNT(*) FROM LikedBy WHERE photo_id = {0}".format(photo_id)) 
-	return cursor.fetchone()[0]
+	cursor.execute("SELECT U.user_id, U.first_name, U.last_name FROM Users U, LikedBy LB, Photos P WHERE LB.user_id = U.user_id AND LB.photo_id = P.photo_id AND LB.photo_id = {0}".format(photo_id))
+	likes = cursor.fetchall() 
+	if likes is not None: 
+		photo_likes = []
+		for likers in likes:
+			photo_likes.append(
+				{
+					"uid": int(likers[0]), 
+					"first_name": str(likers[1]),
+					"last_name": str(likers[2])
+				}
+			)
+		return photo_likes
+	else:
+		return None
 
-# add a like to a photo
+# add a like to a photo - login required
 @app.route('/addLike/<int:pid>', methods=['POST'])
+@flask_login.login_required
 def addLike(pid):
+	user_id = getUserIdFromEmail(flask_login.current_user.id)
+	cursor = conn.cursor() 
+	cursor.execute("INSERT INTO LikedBy (photo_id, user_id) VALUES (%s, %s)", (pid, user_id))
+	cursor.execute("UPDATE Photos SET num_likes = num_likes + 1 WHERE photo_id = {0}".format(pid))
+	conn.commit()
+	return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
+
+# remove a like from a photo - login required
+@app.route('/removeLike/<int:pid>', methods=['POST'])
+@flask_login.login_required
+def removeLike(pid):
+	user_id = getUserIdFromEmail(flask_login.current_user.id)
+	cursor = conn.cursor() 
+	cursor.execute("DELETE FROM LikedBy WHERE photo_id = {0} AND user_id = {1}".format(pid, user_id))
+	cursor.execute("UPDATE Photos SET num_likes = num_likes - 1 WHERE photo_id = {0}".format(pid))
+	conn.commit()
+	return flask.redirect(flask.url_for('photo', pid=pid))
+
+### END LIKES CODE ###
+
+
+### COMMENTS CODE ###
+# get all comments on a photo
+def getPhotoComments(photo_id):
+	# conn = mysql.connect()
+	cursor = conn.cursor()
+	cursor.execute("SELECT U.user_id, U.first_name, U.last_name, U.email, C.date_posted, C.text FROM Comments C, Users U WHERE U.user_id = C.user_id AND photo_id = {0}".format(photo_id)) 
+	return cursor.fetchall()
+
+# add a comment to a photo - logged in or anonymous users
+@app.route('/addComment/<int:pid>', methods=['POST'])
+def addComment(pid):
+	date = datetime.date.today()
+	if request.form.get('comment') == None:
+		return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
 	if user_id == None: 
 		user_id = 1000000
 		# anonymous user
@@ -609,13 +642,21 @@ def addLike(pid):
 		if not cursor.fetchone():
 			cursor.execute("INSERT INTO Users (user_id, first_name, last_name, email, password) VALUES ({0}, '{1}', '{2}', '{3}', '{4}')".format(user_id, "Anonymous", "User", "anon@anon.com", "anonymous"))
 			conn.commit()
-	cursor = conn.cursor() 
-	cursor.execute("INSERT INTO LikedBy (photo_id, user_id) VALUES (%s, %s)", (pid, user_id))
-	cursor.execute("UPDATE Photos SET num_likes = num_likes + 1 WHERE photo_id = {0}".format(pid))
+	cursor = conn.cursor()
+	cursor.execute("INSERT INTO Comments (user_id, photo_id, text, date_posted) VALUES ({0}, {1}, '{2}', {3})".format(flask_login.current_user.id, pid, request.form.get('comment'), date))
 	conn.commit()
 	return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
 
-### END LIKES CODE ###
+# remove a comment from a photo - login required
+@app.route('/removeComment/<int:pid>/<int:cid>', methods=['POST'])
+@flask_login.login_required
+def removeComment(pid, cid):
+	cursor = conn.cursor()
+	cursor.execute("DELETE FROM Comments WHERE comment_id = {0}".format(cid))
+	conn.commit()
+	return flask.redirect(flask.url_for('photo', pid=pid))
+
+### END COMMENTS CODE ###
 
 
 ### TOP USERS AND TAGS CODE ###
@@ -623,7 +664,7 @@ def addLike(pid):
 @app.route('/explore')
 def explore():
 	users = getTopUsers()
-	print(users)
+	# print(users)
 	tags = getTopTags()
 	# if logged in
 	if flask_login.current_user.is_authenticated:

@@ -2,6 +2,23 @@
 <head>
     <style>
         body {font-family: Arial, Helvetica, sans-serif;}
+
+        .img-responsive {
+            max-width: 100%;
+            display: flex;
+            height: auto;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-content: stretch;
+            justify-content: space-evenly;
+            align-items: center;
+        }
+
+        .photoGrid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-gap: 10px;
+        }
         
         /* The Modal (background) */
         .modal {
@@ -95,8 +112,8 @@
                         <input type="file" name="photo" required='true' /><br />
                         <label for="caption">Add caption:</label>
                         <input type="text" name="caption" required='true' /><br />
-                        <label for="tags">Add tags (separate with ", " - e.g., "tag1, tag2, tag3"):</label>
-                        <input type="text" name="tags" required='false' /><br />
+                        <label for="tags">Add tag(s) (separate tags with spaces):</label>
+                        <input type="text" name="tags" required='false' placeholder="boston spring"/><br />
                         <input type="submit" value="Upload" />
                     </form>
                 </div>
@@ -105,11 +122,11 @@
     
         {% if photos %}
         <h2>Album photos</h2>
-            <div class="grid-container">
+            <div class="grid-container photoGrid">
             {% for photo in photos %}
                 <div class="grid-item">
                     <a href="/photo/{{photo.photoId}}">
-                    <img src='data:image/jpg;base64, {{ photo.data }}'/>
+                    <img src='data:image/jpg;base64, {{ photo.data }}'class="img-responsive"/>
                     </a>
                 </div>
             {% endfor %}
