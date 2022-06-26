@@ -11,6 +11,7 @@
 ## Application page endpoints
 - '/': Landing page
 - '/browse': Browse all photos
+- '/explore': View top 10 contributing users and most popular tags
 - '/album/:aid': View an album and its photos
 - '/photo/:pid': View a photo and its caption, tags, likes, and comments
 - '/tag/:tag': View photos by unique tag word
@@ -18,7 +19,7 @@
 - '/register': Create an account
 - '/login': Log into an existing account
 - '/unauth': Unauthorized page
-Login required:
+### Login required:
 - '/profile': View my profile (if logged in)
 - '/upload/:aid': Upload a photo to an album
 

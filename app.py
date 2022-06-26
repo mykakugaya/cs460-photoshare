@@ -426,7 +426,7 @@ def upload_file(aid):
 	if request.method == 'POST':
 		imgfile = request.files['photo']
 		if allowed_file(imgfile.filename):
-			uid = getUserIdFromEmail(flask_login.current_user.id)
+			# uid = getUserIdFromEmail(flask_login.current_user.id)
 			album_id = aid
 
 			# Encode the file to get base64 string
@@ -473,14 +473,9 @@ def upload_file(aid):
 					cursor.execute('''INSERT INTO TaggedWith (tag_id, photo_id) VALUES (%s, %s)''', (tag_id, pid))
 					conn.commit()
 
-			# albumInfo = getAlbumInfo(album_id)
-			# photos=getAlbumPhotos(album_id)
-			# return render_template('album.html', name=flask_login.current_user.id, message='Photo uploaded!', albumId=album_id, album=albumInfo[1], date=albumInfo[2], photos=photos, base64=base64, owner=getUserEmail(albumInfo[3])) 
 			return flask.redirect(flask.url_for('photo', pid=pid))
 	#The method is GET: so if user reloads the page, it won't upload the same photo again
 	else:
-		# albumInfo = getAlbumInfo(album_id)
-		# photos=getAlbumPhotos(album_id)
 		return flask.redirect(flask.url_for('album', aid=album_id))
 
 # delete a photo
@@ -568,17 +563,6 @@ def tag(tag):
 	# if not logged in
 	else:
 		return render_template('tag.html', name='anonymous user', tag=tag, photos=photosArr, anonymous=True)
-
-# add a tag to a photo
-# @app.route('/addTag/<int:pid>', methods=['POST'])
-# def addTag(pid):
-# 	tag = request.form.get('tag')
-# 	if tag == None:
-# 		return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
-# 	cursor = conn.cursor()
-# 	cursor.execute("INSERT INTO Tags (word) VALUES ('{0}')".format(tag))
-# 	conn.commit()
-# 	return flask.redirect(flask.url_for('photo', pid=pid)) # redirect to the photo page
 
 ### END TAGS CODE ###
 
