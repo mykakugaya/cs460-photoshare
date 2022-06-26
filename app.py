@@ -156,7 +156,8 @@ def protected():
 	uid = getUserIdFromEmail(flask_login.current_user.id)
 	albums = getUserAlbums(uid)
 	friends = getUserFriends(uid)
-	return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=flask_login.current_user.id, id=getUserIdFromEmail(flask_login.current_user.id), friends=friends, owner=True)
+	print(friends)
+	return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=flask_login.current_user.id, id=getUserIdFromEmail(flask_login.current_user.id), myFriends=friends)
 	
 @app.route('/profile/<int:uid>')
 def profile(uid):
@@ -166,9 +167,9 @@ def profile(uid):
 	friends = getUserFriends(uid)
 	myFriends = getUserFriends(getUserIdFromEmail(flask_login.current_user.id))
 	if email == flask_login.current_user.id:
-		return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=email, id=getUserIdFromEmail(uid), friends=friends, myFriends=myFriends, owner=True)
+		return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=email, id=uid, friends=friends, myFriends=myFriends)
 	else:
-		return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=email, id=getUserIdFromEmail(uid), friends=friends, myFriends=myFriends, owner=False)
+		return render_template('profile.html', name=flask_login.current_user.id, message="Profile Page", albums=albums, user=email, id=uid, friends=friends, myFriends=myFriends, myId=getUserIdFromEmail(flask_login.current_user.id))
 	
 # get user_id from user email
 def getUserIdFromEmail(email):
@@ -211,6 +212,7 @@ def getUserAlbums(uid):
 def getUserFriends(uid):
 	cursor = conn.cursor()
 	cursor.execute("SELECT FW.user1_id AS uid, U.first_name, U.last_name FROM FriendsWith FW, Users U WHERE U.user_id = FW.user1_id AND FW.user2_id = {0} UNION SELECT FW.user2_id AS uid, U.first_name, U.last_name FROM FriendsWith FW, Users U WHERE U.user_id = FW.user2_id AND FW.user1_id = {0}".format(uid))
+	# print(cursor.fetchall())
 	return cursor.fetchall()
 
 # add a new friend for a user

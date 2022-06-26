@@ -71,33 +71,44 @@
                 <h3>{{name}}'s Friends</h3>
             </div>
             <!-- list of user's friends -->
-            <div class="friendsList">
-                <ul>
-                    {% if friends %}
-                        <!-- if owner is True, user is viewing own profile -->
-                        {% if owner == True %}
-                            <li><a href='/profile/{{friend[0]}}'>{{friend[1]}} {{friend[2]}}</a></li>
-                        <!-- if owner is False, user is viewing another user's profile -->
+            {% if myFriends %}
+                <div class="friendsList">
+                    <ul>
+                        <!-- if no friends (only myFriends), user is viewing own profile -->
+                        {% if not friends %}
+                            {% for friend in myFriends %}
+                                <li><a href='/profile/{{friend[0]}}'>{{friend[1]}} {{friend[2]}}</a>
+                                <form action='/remove_friend/{{friend[0]}}' method='POST'>
+                                    <input type='submit' value='Remove Friend'></input>
+                                </form></li>
+                            {% endfor %}
+                        <!-- if friends and myFriends, user is viewing another user's profile -->
                         {% else %}
                             {% for friend in friends %}
                                 <li><a href='/profile/{{friend[0]}}'>{{friend[1]}} {{friend[2]}}</a></li>
-                                <!-- btn to add friend -->
                                 {% if friend not in myFriends %}
-                                <form action='/add_friend/{{friend[0]}}' method='POST'>
-                                    <input type='submit' value='Add Friend'></input>
-                                </form>
+                                    {% if friend[0] != myId %}
+                                    <!-- btn to add friend if not in myFriends AND friend is not logged in user -->
+                                        <form action='/add_friend/{{friend[0]}}' method='POST'>
+                                            <input type='submit' value='Add Friend'></input>
+                                        </form>
+                                    {% endif %}
+                                    <form action='/remove_friend/{{friend[0]}}' method='POST'>
+                                        <input type='submit' value='Remove Friend'></input>
+                                    </form>
                                 {% else %}
+                                <!-- btn to remove friend if exists in myFriends -->
                                 <form action='/remove_friend/{{friend[0]}}' method='POST'>
                                     <input type='submit' value='Remove Friend'></input>
                                 </form>
                                 {% endif %}
                             {% endfor %}
                         {% endif %}
-                    {% else %}
-                        <li><a href='explore/users'>No friends yet! Search for users here -></a></li>
-                    {% endif %}
-                </ul>
-            </div>
+                    </ul>
+                </div>
+            {% else %}
+            <a href='explore/users'>No friends yet! Search for users here -></a>
+            {% endif %}
         </div>
     </div>
 
