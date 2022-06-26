@@ -1,2 +1,41 @@
 <!-- LIST THE TOP USERS AND TAGS -->
+<head>
+    <base href="http://localhost:5000/">
+    <title>Photoshare</title>
+    {% if name %}
+        <h3>Hello, {{ name }}!</h3>
+    {% endif %}
+</head>
 
+<body>
+    {% if users %}
+        <h3>Top Contributing Users</h3>
+        {% for user in users %}
+            <a href="/profile/{{user.uid}}">{{user.first_name}} {{user.last_name}}</a>
+            <p>Contribution Score: {{user.totalScore}}</p>
+        {% endfor %}
+    {% endif %}
+
+    {% if tags %}
+        <h3>Most Popular Tags</h3>
+        {% for tag in tags %}
+            <a href="/tag/{{tag[0]}}">{{tag[0]}}</a>
+            <p>Tagged in {{tag[1]}} photos</p>
+        {% endfor %}
+    {% endif %}
+    
+
+    <br/>
+    <h3>Main Menu:</h3>
+    <ul>
+        <li><a href='/'>Home</a></li>
+        <li><a href='/explore'>Top Users and Tags</a></li>
+        {% if anonymous %}
+            <li><a href='/login'>Login</a></li>
+            <li><a href='/register'>or create an account</a></li>
+        {% else %}
+            <li><a href='/profile'>My Profile</a></li>
+            <li><a href='/logout'>Logout</a></li>
+        {% endif %}
+    </ul>
+</body>

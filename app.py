@@ -199,6 +199,8 @@ def getUserPhotos(uid):
 	cursor.execute("SELECT caption, photo_id, data, num_likes, date_added, album_id FROM Photos P, Users U, Albums A WHERE P.album_id = A.album_id AND A.user_id = U.user_id AND U.user_id = '{0}'".format(uid))
 	return convertTupToPhotosList(cursor.fetchall())
 
+
+
 # get all albums for a user
 def getUserAlbums(uid):
 	cursor = conn.cursor()
@@ -608,7 +610,49 @@ def addLike(pid):
 
 
 ### TOP USERS AND TAGS CODE ###
+# explore page
+@app.route('/explore')
+def explore():
+	users = getTopUsers()
+	print(users)
+	tags = getTopTags()
+	# if logged in
+	if flask_login.current_user.is_authenticated:
+		return render_template('explore.html', name=flask_login.current_user.id, users=users, tags=tags)
+	# if not logged in
+	else:
+		return render_template('explore.html', name='anonymous user', users=users, tags=tags, anonymous=True)
 
+# get top 10 users
+def getTopUsers():
+	# 10 users with the largest sum of photos and comments
+	cursor = conn.cursor()
+	# users and num photos
+	cursor.execute("SELECT U.user_id, U.first_name, U.last_name, COUNT(*) AS numPhotos FROM Users U, Photos P, Albums A WHERE U.user_id = A.user_id AND A.album_id = P.album_id GROUP BY U.user_id ORDER BY U.user_id")
+	userPhotoScore = cursor.fetchall()
+	# users and num comments
+	cursor.execute("SELECT U.user_id, U.first_name, U.last_name, COUNT(*) AS numComments FROM Users U, Comments C WHERE U.user_id = C.user_id GROUP BY U.user_id ORDER BY U.user_id")
+	userCommentScore = cursor.fetchall()
+	usersArr = []
+	for user in userPhotoScore:
+		usersArr.append({
+			'uid': user[0],
+			'first_name': user[1],
+			'last_name': user[2],
+			'totalScore': user[3]
+		})
+	for user in userCommentScore:
+		for i in range(len(usersArr)):
+			if usersArr[i]['uid'] == user[0]:
+				usersArr[i]['totalScore'] += int(usersArr[i]['numComments'])
+	return usersArr
+
+# get top 10 tags
+def getTopTags():
+	# 10 tags with the most photos
+	cursor = conn.cursor()
+	cursor.execute("SELECT T.word, COUNT(P.photo_id) AS numPhotos FROM Tags T, Photos P, TaggedWith TW WHERE T.tag_id = TW.tag_id AND TW.photo_id = P.photo_id GROUP BY T.word ORDER BY numPhotos DESC LIMIT 10")
+	return cursor.fetchall()
 
 ### END TOP USERS AND TAGS CODE ###
 
