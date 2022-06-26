@@ -561,12 +561,13 @@ def tags(tags):
 		photos += getPhotosWithTag(tag)
 	photosArr = []
 	for photo in photos:
+		taggedPhoto = {
+			'pid': photo[0],
+			'data': photo[1].decode()
+		}
 		# skip duplicate pids
-		if photo not in photosArr:
-			photosArr.append({
-				'pid': photo[0],
-				'data': photo[1].decode()
-			})
+		if taggedPhoto not in photosArr:
+			photosArr.append(taggedPhoto)
 	# if logged in
 	if flask_login.current_user.is_authenticated:
 		return render_template('tag.html', name=flask_login.current_user.id, tags=tags, photos=photosArr)
