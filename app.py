@@ -89,8 +89,7 @@ def login():
 			return flask.redirect(flask.url_for('protected')) #protected is a function defined in this file: /profile
 
 	#information did not match
-	return "<a href='/login'>Try again</a>\
-			</br><a href='/register'>or create an account</a>"
+	return render_template('login.html', error='Incorrect email or password. Please try again.')
 
 # Logout user
 @app.route('/logout')

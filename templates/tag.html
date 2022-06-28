@@ -29,6 +29,7 @@
 </head>
 
 <body>
+    <h2>Browse Tagged Photos</h2>
     {% if tag %}
     <h2>Tag: {{tag}}</h2>
     {% endif %}
@@ -53,9 +54,9 @@
         </div>
     {% else %}
         {% if tag %}
-        <h2>No photos tagged with {{tag}}.</h2>
+        <p>No photos tagged with {{tag}}.</p>
         {% elif tags %}
-        <h2>No photos tagged with those tags.</h2>
+        <p>No photos tagged with those tags.</p>
         {% endif %}
     {% endif %}
 
